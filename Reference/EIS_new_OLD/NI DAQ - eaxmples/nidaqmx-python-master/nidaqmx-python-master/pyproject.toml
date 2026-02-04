@@ -1,0 +1,169 @@
+[tool.poetry]
+name = "nidaqmx"
+version = "1.2.0-dev2"
+license = "MIT"
+description = "NI-DAQmx Python API"
+authors = ["NI <opensource@ni.com>"]
+maintainers = [
+  "Zach Hindes <zach.hindes@ni.com>",
+  "Maxx Boehme <maxx.boehme@ni.com>",
+  "Brad Keryan <brad.keryan@ni.com>",
+]
+readme = "README.rst"
+repository = "https://github.com/ni/nidaqmx-python"
+documentation = "https://nidaqmx-python.readthedocs.io"
+keywords = ["nidaqmx", "nidaq", "daqmx", "daq"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: System :: Hardware :: Hardware Drivers",
+]
+exclude = ["nidaqmx/tests"]
+packages = [{ include = "nidaqmx", from = "generated" }]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = [
+  { version = ">=1.22", python = ">=3.9,<3.12" },
+  { version = ">=1.26", python = ">=3.12,<3.13" },
+  { version = ">=2.1", python = "^3.13" },
+]
+deprecation = ">=2.1"
+grpcio = { version = ">=1.49.0,<2.0", optional = true }
+protobuf = { version = ">=4.21", optional = true }
+hightime = ">=0.2.2"
+tzlocal = "^5.0"
+python-decouple = ">=3.8"
+click = ">=8.0.0"
+distro = { version = ">=1.9.0", platform = "linux" }
+requests = ">=2.25.0"
+
+
+[tool.poetry.extras]
+grpc = ["grpcio", "protobuf"]
+
+[tool.poetry.group.codegen.dependencies]
+click = "^8.1"
+Mako = "^1.2"
+grpcio-tools = [
+  { version = "1.49.1", python = ">=3.9,<3.12" },
+  { version = "1.59.0", python = ">=3.12,<3.13" },
+  { version = "1.67.0", python = "^3.13" },
+]
+mypy-protobuf = ">=3.4"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = { version = ">=8.2", python = "^3.11" }
+sphinx-rtd-theme = ">=1.0.0"
+toml = ">=0.10.2"
+
+[tool.poetry.group.examples]
+# The "examples" group is optional because matplotlib does not distribute wheels for 32-bit Windows.
+optional = true
+
+[tool.poetry.group.examples.dependencies]
+matplotlib = { version = ">=3.9.0", python = ">=3.9" }
+nptdms = ">=1.9.0"
+
+[tool.poetry.group.lint.dependencies]
+bandit = { version = ">=1.7", extras = ["toml"] }
+ni-python-styleguide = ">=0.4.1"
+mypy = ">=1.0"
+types-protobuf = ">=4.21"
+types-requests = ">=2.25.0"
+types-grpcio = ">=1.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=7.2"
+pytest-cov = ">=4.0"
+pytest-mock = ">=3.0"
+pykka = ">=3.0"
+tox = ">=3.24"
+
+[tool.poetry.scripts]
+nidaqmx = 'nidaqmx.__main__:main'
+
+[tool.black]
+line-length = 100
+extend_exclude = ".tox/|docs/|generated/|src/codegen/metadata/|src/codegen/templates/|src/handwritten/"
+
+[tool.ni-python-styleguide]
+extend_exclude = ".tox,docs,generated,src/codegen/metadata,src/codegen/templates,src/handwritten"
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules --strict-markers"
+filterwarnings = ["always::ImportWarning", "always::ResourceWarning"]
+testpaths = ["tests"]
+markers = [
+  # Defines custom markers used by nidaqmx tests. Prevents PytestUnknownMarkWarning.
+  "library_only(reason=...): run the test with only the library interpreter implementation.",
+  "library_skip(reason=...): skip the given test function with the library interpreter implementation.",
+  "library_xfail(condition, ..., *, reason=..., run=True, raises=None, strict=xfail_strict): mark the test function as an expected failure with the library interpreter implementation.",
+  "grpc_only(reason=...): run the test with only the gRPC interpreter implementation.",
+  "grpc_skip(reason=...): skip the given test function with the gRPC interpreter implementation.",
+  "grpc_xfail(condition, ..., *, reason=..., run=True, raises=None, strict=xfail_strict): mark the test function as an expected failure with the gRPC interpreter implementation.",
+  "new_task_name: name of the new task to be created.",
+  "device_name: name of the device used for testing.",
+  "task_name: the existing task name to be used for testing.",
+  "channel_name: the existing channel name to be used for testing.",
+  "scale_name: the existing scale name to be used for testing.",
+  "timeout: the timeout in seconds.",
+  "grpc_session_name: specifies GrpcSessionOptions.session_name.",
+  "grpc_session_initialization_behavior: specifies GrpcSessionOptions.initialization_behavior.",
+  "temporary_grpc_channel(options=...): specifies that the test uses a separate gRPC channel.",
+]
+
+[build-system]
+requires = ["poetry-core>=1.8"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+files = "generated/,tests/"
+check_untyped_defs = true
+namespace_packages = true
+plugins = "numpy.typing.mypy_plugin"
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+  # https://github.com/HBNetwork/python-decouple/issues/122 - Add support for type stubs
+  "decouple.*",
+  # https://github.com/briancurtin/deprecation/issues/56 - Add type information (PEP 561)
+  "deprecation.*",
+  "grpc.experimental.*",
+  # https://github.com/ni/hightime/issues/4 - Add type annotations
+  "hightime.*",
+  "importlib_metadata",
+  "mako.*",
+  "nidaqmx.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# mypy-protobuf codegen has some unused ignores.
+module = ["nidaqmx._stubs.*"]
+warn_unused_ignores = false
+
+[tool.bandit]
+skips = [
+  "B101", # assert_used
+]

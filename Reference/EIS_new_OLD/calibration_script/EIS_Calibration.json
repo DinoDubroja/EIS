@@ -1,0 +1,248 @@
+{
+   "EIS_Calibration": {
+      "VersionInfo": "1.0",
+      "Debug": false,
+      "Frequencies": [
+         {
+            "Frequency_Point": 1,
+            "Frequency": 5555.555556,
+            "Gain": 1.1559864184429258,
+            "Phase": 6.163846985366342,
+            "OffsetReal": 5.3668650956329105e-05,
+            "OffsetImaginary": 0.00024287902523417956
+         },
+         {
+            "Frequency_Point": 2,
+            "Frequency": 3030.30303,
+            "Gain": 1.106539046817483,
+            "Phase": 4.417586310093296,
+            "OffsetReal": 3.962409280099496e-05,
+            "OffsetImaginary": 0.00015199946940108155
+         },
+         {
+            "Frequency_Point": 3,
+            "Frequency": 2083.3333333333335,
+            "Gain": 1.0930015045179977,
+            "Phase": 3.1772120536428266,
+            "OffsetReal": 2.276500886446413e-05,
+            "OffsetImaginary": 0.00011290508800127648
+         },
+         {
+            "Frequency_Point": 4,
+            "Frequency": 1190.4761904761904,
+            "Gain": 1.0667572608787212,
+            "Phase": 2.1011354835240224,
+            "OffsetReal": 2.3124436242741547e-05,
+            "OffsetImaginary": 7.300062077897518e-05
+         },
+         {
+            "Frequency_Point": 5,
+            "Frequency": 653.59477124183,
+            "Gain": 1.0718091889752102,
+            "Phase": 0.8347885430488091,
+            "OffsetReal": 4.565951532913493e-06,
+            "OffsetImaginary": 4.510264368970653e-05
+         },
+         {
+            "Frequency_Point": 6,
+            "Frequency": 366.30036630036625,
+            "Gain": 1.0717283186392328,
+            "Phase": 1.3941564457551812,
+            "OffsetReal": 4.70806429032351e-06,
+            "OffsetImaginary": 1.9516719915046655e-05
+         },
+         {
+            "Frequency_Point": 7,
+            "Frequency": 204.49897750511246,
+            "Gain": 1.0624144988915059,
+            "Phase": 0.29668037896380095,
+            "OffsetReal": 6.6322779048821335e-06,
+            "OffsetImaginary": 1.7268646528474212e-05
+         },
+         {
+            "Frequency_Point": 8,
+            "Frequency": 114.15525114155251,
+            "Gain": 1.0720249417187044,
+            "Phase": -0.05781253221271148,
+            "OffsetReal": 3.2823964639203275e-07,
+            "OffsetImaginary": 1.234130257447702e-05
+         },
+         {
+            "Frequency_Point": 9,
+            "Frequency": 63.97952655150351,
+            "Gain": 1.068983766211133,
+            "Phase": 0.8850428462520908,
+            "OffsetReal": 1.950286320485772e-06,
+            "OffsetImaginary": -2.0980434633617664e-06
+         },
+         {
+            "Frequency_Point": 10,
+            "Frequency": 35.72704537334762,
+            "Gain": 1.0598287151719035,
+            "Phase": -0.06918461302001117,
+            "OffsetReal": 4.814214981892092e-06,
+            "OffsetImaginary": 1.2227834965469927e-06
+         },
+         {
+            "Frequency_Point": 11,
+            "Frequency": 19.984012789768187,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 12,
+            "Frequency": 11.170688114387845,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 13,
+            "Frequency": 6.245706077072013,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 14,
+            "Frequency": 3.4922297887200977,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 15,
+            "Frequency": 1.952286127054781,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 16,
+            "Frequency": 1.0915004857177162,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 17,
+            "Frequency": 0.6102435482000866,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 18,
+            "Frequency": 0.34117699238834126,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 19,
+            "Frequency": 0.19074541400338382,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 20,
+            "Frequency": 0.10664209632767277,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 21,
+            "Frequency": 0.05962165291493242,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 22,
+            "Frequency": 0.03333333333333333,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 23,
+            "Frequency": 0.0243,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 24,
+            "Frequency": 0.01666666667,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 25,
+            "Frequency": 0.006666666667,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 26,
+            "Frequency": 0.004761904762,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 27,
+            "Frequency": 0.003333333333,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 28,
+            "Frequency": 0.001666666667,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 29,
+            "Frequency": 0.001111111111,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         },
+         {
+            "Frequency_Point": 30,
+            "Frequency": 0.0009259259259,
+            "Gain": 1,
+            "Phase": 0,
+            "OffsetReal": 0,
+            "OffsetImaginary": 0
+         }
+      ]
+   }
+}

@@ -1,0 +1,1034 @@
+{
+    "EIS_default_calibration": [
+        {
+            "name": "VersionInfo",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Debug",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point1",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency1",
+            "value": 4761.904762,
+            "type": "d"
+        },
+        {
+            "name": "Gain1",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase1",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal1",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary1",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point2",
+            "value": 2.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency2",
+            "value": 3030.30303,
+            "type": "d"
+        },
+        {
+            "name": "Gain2",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase2",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal2",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary2",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point3",
+            "value": 3.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency3",
+            "value": 1960.784314,
+            "type": "d"
+        },
+        {
+            "name": "Gain3",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase3",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal3",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary3",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point4",
+            "value": 4.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency4",
+            "value": 1234.567901,
+            "type": "d"
+        },
+        {
+            "name": "Gain4",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase4",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal4",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary4",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point5",
+            "value": 5.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency5",
+            "value": 793.6507937,
+            "type": "d"
+        },
+        {
+            "name": "Gain5",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase5",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal5",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary5",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point6",
+            "value": 6.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency6",
+            "value": 497.5124378,
+            "type": "d"
+        },
+        {
+            "name": "Gain6",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase6",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal6",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary6",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point7",
+            "value": 7.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency7",
+            "value": 314.4654088,
+            "type": "d"
+        },
+        {
+            "name": "Gain7",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase7",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal7",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary7",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point8",
+            "value": 8.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency8",
+            "value": 199.6007984,
+            "type": "d"
+        },
+        {
+            "name": "Gain8",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase8",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal8",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary8",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point9",
+            "value": 9.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency9",
+            "value": 125.7861635,
+            "type": "d"
+        },
+        {
+            "name": "Gain9",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase9",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal9",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary9",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point10",
+            "value": 10.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency10",
+            "value": 79.17656374,
+            "type": "d"
+        },
+        {
+            "name": "Gain10",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase10",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal10",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary10",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point11",
+            "value": 11.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency11",
+            "value": 49.97501249,
+            "type": "d"
+        },
+        {
+            "name": "Gain11",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase11",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal11",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary11",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point12",
+            "value": 12.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency12",
+            "value": 31.53579313,
+            "type": "d"
+        },
+        {
+            "name": "Gain12",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase12",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal12",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary12",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point13",
+            "value": 13.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency13",
+            "value": 19.90049751,
+            "type": "d"
+        },
+        {
+            "name": "Gain13",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase13",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal13",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary13",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point14",
+            "value": 14.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency14",
+            "value": 12.55965838,
+            "type": "d"
+        },
+        {
+            "name": "Gain14",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase14",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal14",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary14",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point15",
+            "value": 15.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency15",
+            "value": 7.925186242,
+            "type": "d"
+        },
+        {
+            "name": "Gain15",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase15",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal15",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary15",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point16",
+            "value": 16.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency16",
+            "value": 4.999750012,
+            "type": "d"
+        },
+        {
+            "name": "Gain16",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase16",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal16",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary16",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point17",
+            "value": 17.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency17",
+            "value": 3.154773172,
+            "type": "d"
+        },
+        {
+            "name": "Gain17",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase17",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal17",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary17",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point18",
+            "value": 18.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency18",
+            "value": 1.990525101,
+            "type": "d"
+        },
+        {
+            "name": "Gain18",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase18",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal18",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary18",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point19",
+            "value": 19.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency19",
+            "value": 1.255965838,
+            "type": "d"
+        },
+        {
+            "name": "Gain19",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase19",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal19",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary19",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point20",
+            "value": 20.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency20",
+            "value": 0.792443261,
+            "type": "d"
+        },
+        {
+            "name": "Gain20",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase20",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal20",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary20",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point21",
+            "value": 21.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency21",
+            "value": 0.4999975,
+            "type": "d"
+        },
+        {
+            "name": "Gain21",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase21",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal21",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary21",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point22",
+            "value": 22.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency22",
+            "value": 0.315477317,
+            "type": "d"
+        },
+        {
+            "name": "Gain22",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase22",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal22",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary22",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point23",
+            "value": 23.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency23",
+            "value": 0.199053699,
+            "type": "d"
+        },
+        {
+            "name": "Gain23",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase23",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal23",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary23",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point24",
+            "value": 24.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency24",
+            "value": 0.125594218,
+            "type": "d"
+        },
+        {
+            "name": "Gain24",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase24",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal24",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary24",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point25",
+            "value": 25.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency25",
+            "value": 0.079244703,
+            "type": "d"
+        },
+        {
+            "name": "Gain25",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase25",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal25",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary25",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point26",
+            "value": 26.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency26",
+            "value": 0.049999975,
+            "type": "d"
+        },
+        {
+            "name": "Gain26",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase26",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal26",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary26",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point27",
+            "value": 27.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency27",
+            "value": 0.031547881,
+            "type": "d"
+        },
+        {
+            "name": "Gain27",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase27",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal27",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary27",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point28",
+            "value": 28.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency28",
+            "value": 0.019905358,
+            "type": "d"
+        },
+        {
+            "name": "Gain28",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase28",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal28",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary28",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point29",
+            "value": 29.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency29",
+            "value": 0.012559431,
+            "type": "d"
+        },
+        {
+            "name": "Gain29",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase29",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal29",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary29",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point30",
+            "value": 30.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency30",
+            "value": 0.007924467,
+            "type": "d"
+        },
+        {
+            "name": "Gain30",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase30",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal30",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary30",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point31",
+            "value": 31.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency31",
+            "value": 0.005,
+            "type": "d"
+        },
+        {
+            "name": "Gain31",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase31",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal31",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary31",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point32",
+            "value": 32.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency32",
+            "value": 0.003154787,
+            "type": "d"
+        },
+        {
+            "name": "Gain32",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase32",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal32",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary32",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point33",
+            "value": 33.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency33",
+            "value": 0.001990536,
+            "type": "d"
+        },
+        {
+            "name": "Gain33",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase33",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal33",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary33",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency_Point34",
+            "value": 34.0,
+            "type": "d"
+        },
+        {
+            "name": "Frequency34",
+            "value": 0.001255943,
+            "type": "d"
+        },
+        {
+            "name": "Gain34",
+            "value": 1.0,
+            "type": "d"
+        },
+        {
+            "name": "Phase34",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetReal34",
+            "value": 0.0,
+            "type": "d"
+        },
+        {
+            "name": "OffsetImaginary34",
+            "value": 0.0,
+            "type": "d"
+        }
+    ]
+}
