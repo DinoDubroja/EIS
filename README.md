@@ -8,7 +8,9 @@ Repository for EIS measurement scripts and libraries
   - Unit tests: `USB6451/tests/test_usb6451_unit.py`, `USB6451/tests/test_waveforms_unit.py`
   - Demo notebook: `USB6451/Demos/sinewave_periodic.ipynb`
   - Waveforms demo notebook: `USB6451/Demos/waveforms_demo.ipynb`
+  - Continuous AI demo notebook: `USB6451/Demos/analog_input_continuous.ipynb`
   - Waveform helpers: `USB6451/waveforms.py`
+  - Includes AO output, AI input, and low-level synchronized AO+AI APIs
 
 ## Run USB6451 unit tests
 

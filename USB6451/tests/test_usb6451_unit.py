@@ -25,8 +25,93 @@ def _install_fake_nidaqmx() -> None:
     class DaqError(Exception):
         """Stub DAQ error."""
 
+    class _FakeOutStream:
+        def __init__(self) -> None:
+            self.regen_mode = None
+
+    class _FakeStartTrigger:
+        def __init__(self) -> None:
+            self.term = "/Dev1/ai/StartTrigger"
+            self.source = None
+
+        def cfg_dig_edge_start_trig(self, trigger_source):
+            self.source = trigger_source
+
+    class _FakeTriggers:
+        def __init__(self) -> None:
+            self.start_trigger = _FakeStartTrigger()
+
+    class _FakeTiming:
+        def __init__(self) -> None:
+            self.samp_clk_rate = 0.0
+
+        def cfg_samp_clk_timing(self, rate, sample_mode=None, samps_per_chan=None):
+            self.samp_clk_rate = float(rate)
+
+    class _FakeAOChannels:
+        def __init__(self) -> None:
+            self.channels = []
+
+        def add_ao_voltage_chan(self, physical_channel, min_val=None, max_val=None):
+            self.channels.append(
+                {"physical_channel": physical_channel, "min_val": min_val, "max_val": max_val}
+            )
+
+    class _FakeAIChannels:
+        def __init__(self) -> None:
+            self.channels = []
+
+        def add_ai_voltage_chan(
+            self,
+            physical_channel,
+            min_val=None,
+            max_val=None,
+            terminal_config=None,
+        ):
+            self.channels.append(
+                {
+                    "physical_channel": physical_channel,
+                    "min_val": min_val,
+                    "max_val": max_val,
+                    "terminal_config": terminal_config,
+                }
+            )
+
     class Task:
-        """Stub task type used only for type references in unit tests."""
+        """Stub task with basic AO/AI/timing/read/write behavior."""
+
+        def __init__(self) -> None:
+            self.out_stream = _FakeOutStream()
+            self.triggers = _FakeTriggers()
+            self.timing = _FakeTiming()
+            self.ao_channels = _FakeAOChannels()
+            self.ai_channels = _FakeAIChannels()
+            self.started = False
+            self.closed = False
+
+        def write(self, data, auto_start=False):
+            if auto_start:
+                self.start()
+            arr = np.asarray(data)
+            if arr.ndim == 0:
+                return 1
+            return int(arr.shape[-1])
+
+        def start(self):
+            self.started = True
+
+        def stop(self):
+            self.started = False
+
+        def close(self):
+            self.closed = True
+
+        def read(self, number_of_samples_per_channel=1, timeout=10.0):
+            n = int(number_of_samples_per_channel)
+            ch = len(self.ai_channels.channels)
+            if ch <= 1:
+                return [float(i) for i in range(n)]
+            return [[float(i + 1000 * c) for i in range(n)] for c in range(ch)]
 
     class AcquisitionType:
         CONTINUOUS = "CONTINUOUS"
@@ -134,6 +219,113 @@ class TestUSB6451Unit(unittest.TestCase):
                 ao_channel="ao0",
                 min_voltage=-10.0,
                 max_voltage=10.0,
+            )
+
+    # Checks continuous input can start and returns configured sample rate.
+    def test_start_continuous_input_returns_actual_sample_rate(self) -> None:
+        actual = self.dev.start_continuous_input(
+            device="Dev1",
+            ai_channels=("ai0", "ai1"),
+            sample_rate=20_000.0,
+            min_voltage=-10.0,
+            max_voltage=10.0,
+        )
+        self.assertAlmostEqual(actual, 20_000.0)
+        self.assertTrue(self.dev.is_input_running())
+
+    # Checks input read chunk returns channels x samples matrix for multi-channel read.
+    def test_read_input_chunk_shape_multi_channel(self) -> None:
+        self.dev.start_continuous_input(
+            device="Dev1",
+            ai_channels=("ai0", "ai1"),
+            sample_rate=10_000.0,
+            min_voltage=-10.0,
+            max_voltage=10.0,
+        )
+        data = self.dev.read_input_chunk(samples_per_channel=5)
+        self.assertEqual(data.shape, (2, 5))
+
+    # Checks read_input_chunk rejects calls when input task is not running.
+    def test_read_input_chunk_requires_running_task(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.dev.read_input_chunk(samples_per_channel=5)
+
+    # Checks stop_input is safe to call even when no input task exists.
+    def test_stop_input_without_task_is_safe(self) -> None:
+        self.dev.stop_input()
+        self.assertFalse(self.dev.is_input_running())
+
+    # Checks input validation rejects too many channels.
+    def test_start_continuous_input_rejects_too_many_channels(self) -> None:
+        channels = tuple(f"ai{i}" for i in range(self.dev.MAX_AI_CHANNELS + 1))
+        with self.assertRaises(ValueError):
+            self.dev.start_continuous_input(
+                device="Dev1",
+                ai_channels=channels,
+                sample_rate=10_000.0,
+                min_voltage=-10.0,
+                max_voltage=10.0,
+            )
+
+    # Checks synchronized periodic IO start returns config and running state.
+    def test_start_continuous_sync_periodic_io_returns_config(self) -> None:
+        config = self.dev.start_continuous_sync_periodic_io(
+            period_samples=[0.0, 1.0, 0.0, -1.0],
+            sample_rate=20_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        self.assertTrue(self.dev.is_sync_running())
+        self.assertEqual(config.samples_per_period, 4)
+        self.assertAlmostEqual(config.output_frequency, 5_000.0)
+        self.assertAlmostEqual(config.actual_sample_rate, 20_000.0)
+
+    # Checks synchronized read returns channels x samples matrix.
+    def test_read_sync_input_chunk_shape_multi_channel(self) -> None:
+        self.dev.start_continuous_sync_periodic_io(
+            period_samples=[0.0, 1.0, 0.0, -1.0],
+            sample_rate=10_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        data = self.dev.read_sync_input_chunk(samples_per_channel=5)
+        self.assertEqual(data.shape, (2, 5))
+
+    # Checks synchronized read rejects calls when sync tasks are not running.
+    def test_read_sync_input_chunk_requires_running_task(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.dev.read_sync_input_chunk(samples_per_channel=5)
+
+    # Checks synchronized stop is safe to call when no sync tasks exist.
+    def test_stop_sync_io_without_task_is_safe(self) -> None:
+        self.dev.stop_sync_io()
+        self.assertFalse(self.dev.is_sync_running())
+
+    # Checks synchronized start wires AO start trigger to AI start trigger terminal.
+    def test_sync_start_trigger_wiring(self) -> None:
+        self.dev.start_continuous_sync_periodic_io(
+            period_samples=[0.0, 1.0, 0.0, -1.0],
+            sample_rate=10_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0",),
+        )
+        self.assertEqual(
+            self.dev._sync_ao_task.triggers.start_trigger.source,
+            self.dev._sync_ai_task.triggers.start_trigger.term,
+        )
+
+    # Checks synchronized start rejects sample rates above AO limit.
+    def test_start_continuous_sync_periodic_io_rejects_ao_sample_rate_limit(self) -> None:
+        with self.assertRaises(ValueError):
+            self.dev.start_continuous_sync_periodic_io(
+                period_samples=[0.0, 1.0, 0.0, -1.0],
+                sample_rate=self.dev.MAX_AO_SAMPLE_RATE + 1,
+                device="Dev1",
+                ao_channel="ao0",
+                ai_channels=("ai0",),
             )
 
     # Checks that automatic sample-count calculation gives expected values.
