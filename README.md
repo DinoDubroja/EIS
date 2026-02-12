@@ -20,5 +20,7 @@ python -m unittest discover -s USB6451/tests -p "test_*.py"
 
 ## TODO
 
-* Create EIS.py class
-* test repo
+* diff mode AI
+* synchronous AO + 2*AI notebook
+* higher-level functions
+* EIS.py
