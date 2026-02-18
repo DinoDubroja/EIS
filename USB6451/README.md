@@ -61,7 +61,7 @@ Default safety checks in helpers:
 - `USB6451/Demos/waveforms_demo.ipynb`  
   A DAQ-free notebook for waveform data preparation and visualization from `waveforms.py`. It includes staircase-style plots and an interactive explorer for live parameter tuning.
 - `USB6451/Demos/analog_input_continuous.ipynb`  
-  A step-by-step continuous AI acquisition demo using `start_continuous_input`, `read_input_chunk`, and `stop_input`. It follows NI's chunked-read pattern and finishes with a simple time-voltage plot.
+  A step-by-step continuous AI acquisition demo using `start_continuous_input`, `read_input_chunk`, and `stop_input`. It also supports optional AO sine generation for a simple loopback measurement before plotting time-voltage results.
 
 ## Tests
 
