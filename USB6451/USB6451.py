@@ -7,7 +7,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 import nidaqmx
-from nidaqmx.constants import AcquisitionType, RegenerationMode
+from nidaqmx.constants import AcquisitionType, RegenerationMode, TerminalConfiguration
 try:
     from USB6451 import waveforms
 except ImportError:
@@ -137,6 +137,7 @@ class USB6451:
     MAX_AI_SAMPLE_RATE = 1_000_000.0
     # USB-6451 AI channels from manual: 16 single-ended or 8 differential.
     MAX_AI_CHANNELS = 16
+    MAX_AI_DIFF_CHANNELS = 8
 
     def __init__(self) -> None:
         """Create a new controller.
@@ -156,6 +157,14 @@ class USB6451:
         self._last_config: Optional[ContinuousSineConfig | ContinuousPeriodicConfig] = None
         self._last_input_config: Optional[ContinuousInputConfig] = None
         self._last_sync_config: Optional[ContinuousSyncPeriodicConfig] = None
+        self._non_regen_sine_active = False
+        self._non_regen_phase = 0.0
+        self._non_regen_frequency = 0.0
+        self._non_regen_amplitude = 0.0
+        self._non_regen_offset = 0.0
+        self._non_regen_sample_rate = 0.0
+        self._non_regen_min_voltage = -10.0
+        self._non_regen_max_voltage = 10.0
 
     def start_continuous_sine_output(
         self,
@@ -186,6 +195,8 @@ class USB6451:
             min_voltage: Lower output limit in volts (V).
             max_voltage: Upper output limit in volts (V).
             allow_regen: If ``True``, DAQ replays one written period continuously.
+                For true non-regenerative streaming, use
+                ``start_continuous_sine_output_non_regen(...)``.
         Output:
             Exact generated frequency in hertz (Hz).
             If you only want to preview requested vs actual settings without starting
@@ -291,6 +302,134 @@ class USB6451:
             max_voltage=max_voltage,
         )
 
+    def start_continuous_sine_output_non_regen(
+        self,
+        *,
+        device: str = "Dev1",
+        ao_channel: str = "ao0",
+        frequency: float = 17.0,
+        amplitude: float = 1.0,
+        offset: float = 0.0,
+        sample_rate: float = 10_000.0,
+        chunk_samples: int = 1000,
+        min_voltage: float = -10.0,
+        max_voltage: float = 10.0,
+    ) -> float:
+        """Start continuous non-regenerative sine output.
+
+        This mode is for frequencies where ``sample_rate / frequency`` is not an integer.
+        You must keep feeding new chunks using ``write_sine_chunk_non_regen(...)``.
+
+        Inputs:
+            device: Device name (for example ``"Dev1"``).
+            ao_channel: AO channel name (for example ``"ao0"``).
+            frequency: Exact sine frequency in hertz (Hz). Must be > 0.
+            amplitude: Sine peak amplitude in volts (V). Must be >= 0.
+            offset: DC offset in volts (V).
+            sample_rate: AO sample clock in samples/second (S/s). Must be > 0.
+            chunk_samples: Number of samples written in first chunk. Must be >= 1.
+            min_voltage: Lower output limit in volts (V).
+            max_voltage: Upper output limit in volts (V).
+        Output:
+            Actual configured sample rate in samples/second (S/s).
+        Raises:
+            ValueError: Invalid inputs.
+            nidaqmx.DaqError: DAQ configuration/start/write failure.
+        """
+
+        if chunk_samples < 1:
+            raise ValueError("chunk_samples must be >= 1.")
+
+        validated_device, validated_channel = self._validate_sine_common(
+            device=device,
+            ao_channel=ao_channel,
+            frequency=frequency,
+            amplitude=amplitude,
+            offset=offset,
+            sample_rate=sample_rate,
+            min_voltage=min_voltage,
+            max_voltage=max_voltage,
+        )
+
+        self.stop_output()
+
+        physical_channel = f"{validated_device}/{validated_channel}"
+        task = nidaqmx.Task()
+        try:
+            task.ao_channels.add_ao_voltage_chan(
+                physical_channel,
+                min_val=min_voltage,
+                max_val=max_voltage,
+            )
+            task.out_stream.regen_mode = RegenerationMode.DONT_ALLOW_REGENERATION
+            task.timing.cfg_samp_clk_timing(
+                rate=sample_rate,
+                sample_mode=AcquisitionType.CONTINUOUS,
+            )
+            actual_sample_rate = float(task.timing.samp_clk_rate)
+            first_chunk, next_phase = self._build_sine_chunk(
+                frequency=frequency,
+                amplitude=amplitude,
+                offset=offset,
+                sample_rate=actual_sample_rate,
+                sample_count=chunk_samples,
+                phase_in=0.0,
+            )
+            task.write(first_chunk, auto_start=False)
+            task.start()
+        except Exception:
+            task.close()
+            raise
+
+        self._ao_task = task
+        self._last_config = None
+        self._non_regen_sine_active = True
+        self._non_regen_phase = next_phase
+        self._non_regen_frequency = frequency
+        self._non_regen_amplitude = amplitude
+        self._non_regen_offset = offset
+        self._non_regen_sample_rate = actual_sample_rate
+        self._non_regen_min_voltage = min_voltage
+        self._non_regen_max_voltage = max_voltage
+        return actual_sample_rate
+
+    def write_sine_chunk_non_regen(
+        self,
+        *,
+        chunk_samples: int = 1000,
+    ) -> int:
+        """Write one more sine chunk for active non-regenerative output.
+
+        Inputs:
+            chunk_samples: Number of new samples to generate and write. Must be >= 1.
+        Output:
+            Number of written samples.
+        Raises:
+            RuntimeError: Non-regenerative sine output is not active.
+            ValueError: Invalid ``chunk_samples``.
+            nidaqmx.DaqError: DAQ write failure.
+        """
+
+        if not self._non_regen_sine_active or self._ao_task is None:
+            raise RuntimeError(
+                "Non-regenerative sine output is not active. "
+                "Call start_continuous_sine_output_non_regen() first."
+            )
+        if chunk_samples < 1:
+            raise ValueError("chunk_samples must be >= 1.")
+
+        chunk, next_phase = self._build_sine_chunk(
+            frequency=self._non_regen_frequency,
+            amplitude=self._non_regen_amplitude,
+            offset=self._non_regen_offset,
+            sample_rate=self._non_regen_sample_rate,
+            sample_count=chunk_samples,
+            phase_in=self._non_regen_phase,
+        )
+        written = self._ao_task.write(chunk, auto_start=False)
+        self._non_regen_phase = next_phase
+        return int(written)
+
     def stop_output(self) -> None:
         """Stop and release the active analog output task.
 
@@ -301,10 +440,12 @@ class USB6451:
         """
 
         if self._ao_task is None:
+            self._clear_non_regen_state()
             return
 
         task = self._ao_task
         self._ao_task = None
+        self._clear_non_regen_state()
         try:
             task.stop()
         except nidaqmx.DaqError:
@@ -320,6 +461,7 @@ class USB6451:
         sample_rate: float = 10_000.0,
         min_voltage: float = -10.0,
         max_voltage: float = 10.0,
+        input_mode: str = "default",
         terminal_config=None,
     ) -> float:
         """Start continuous analog input acquisition using the internal clock.
@@ -334,8 +476,11 @@ class USB6451:
                 and <= ``MAX_AI_SAMPLE_RATE``.
             min_voltage: Lower input limit in volts (V).
             max_voltage: Upper input limit in volts (V).
+            input_mode: Simple AI wiring mode string. Allowed values:
+                ``"default"``, ``"differential"``, ``"rse"``, ``"nrse"``,
+                ``"pseudodifferential"``.
             terminal_config: Optional NI terminal configuration value to pass through to
-                `add_ai_voltage_chan`.
+                `add_ai_voltage_chan`. If provided, it overrides ``input_mode``.
         Output:
             Actual configured sample rate in samples/second (S/s).
         Raises:
@@ -344,12 +489,17 @@ class USB6451:
         """
 
         channels = self._normalize_ai_channels(ai_channels)
+        resolved_terminal_config = self._resolve_terminal_config(
+            input_mode=input_mode,
+            terminal_config=terminal_config,
+        )
         self._validate_input_limits(
             device=device,
             ai_channels=channels,
             sample_rate=sample_rate,
             min_voltage=min_voltage,
             max_voltage=max_voltage,
+            terminal_config=resolved_terminal_config,
         )
 
         self.stop_input()
@@ -358,7 +508,7 @@ class USB6451:
         try:
             for ch in channels:
                 physical_channel = ch if "/" in ch else f"{device}/{ch}"
-                if terminal_config is None:
+                if resolved_terminal_config is None:
                     task.ai_channels.add_ai_voltage_chan(
                         physical_channel,
                         min_val=min_voltage,
@@ -369,7 +519,7 @@ class USB6451:
                         physical_channel,
                         min_val=min_voltage,
                         max_val=max_voltage,
-                        terminal_config=terminal_config,
+                        terminal_config=resolved_terminal_config,
                     )
 
             task.timing.cfg_samp_clk_timing(
@@ -393,6 +543,99 @@ class USB6451:
             actual_sample_rate=actual_sample_rate,
         )
         return actual_sample_rate
+
+    def measure_input_finite(
+        self,
+        *,
+        samples_per_channel: int,
+        sample_rate: float,
+        device: str = "Dev1",
+        ai_channels: str | Sequence[str] = ("ai0",),
+        min_voltage: float = -10.0,
+        max_voltage: float = 10.0,
+        input_mode: str = "default",
+        terminal_config=None,
+        timeout: float = 10.0,
+    ) -> np.ndarray:
+        """Measure one finite AI block and return raw samples.
+
+        NI pattern reference:
+        `analog_in/voltage_acq_int_clk.py` (finite internal-clock acquisition).
+
+        Inputs:
+            samples_per_channel: Number of samples to acquire per channel. Must be >= 1.
+            sample_rate: AI sample clock in samples/second (S/s). Must be > 0 and
+                <= ``MAX_AI_SAMPLE_RATE``.
+            device: Device name (for example ``"Dev1"``).
+            ai_channels: One channel name or a sequence of channel names.
+            min_voltage: Lower input limit in volts (V).
+            max_voltage: Upper input limit in volts (V).
+            input_mode: Simple AI wiring mode string. Allowed values:
+                ``"default"``, ``"differential"``, ``"rse"``, ``"nrse"``,
+                ``"pseudodifferential"``.
+            terminal_config: Optional NI terminal configuration value to pass through to
+                `add_ai_voltage_chan`. If provided, it overrides ``input_mode``.
+            timeout: Read timeout in seconds.
+        Output:
+            ``numpy.ndarray`` with shape ``(channels, samples_per_channel)``.
+        Raises:
+            ValueError: Invalid inputs.
+            nidaqmx.DaqError: DAQ configuration or read failed.
+        """
+
+        if samples_per_channel < 1:
+            raise ValueError("samples_per_channel must be >= 1.")
+
+        channels = self._normalize_ai_channels(ai_channels)
+        resolved_terminal_config = self._resolve_terminal_config(
+            input_mode=input_mode,
+            terminal_config=terminal_config,
+        )
+        self._validate_input_limits(
+            device=device,
+            ai_channels=channels,
+            sample_rate=sample_rate,
+            min_voltage=min_voltage,
+            max_voltage=max_voltage,
+            terminal_config=resolved_terminal_config,
+        )
+
+        task = nidaqmx.Task()
+        try:
+            for ch in channels:
+                physical_channel = ch if "/" in ch else f"{device}/{ch}"
+                if resolved_terminal_config is None:
+                    task.ai_channels.add_ai_voltage_chan(
+                        physical_channel,
+                        min_val=min_voltage,
+                        max_val=max_voltage,
+                    )
+                else:
+                    task.ai_channels.add_ai_voltage_chan(
+                        physical_channel,
+                        min_val=min_voltage,
+                        max_val=max_voltage,
+                        terminal_config=resolved_terminal_config,
+                    )
+
+            task.timing.cfg_samp_clk_timing(
+                rate=sample_rate,
+                sample_mode=AcquisitionType.FINITE,
+                samps_per_chan=samples_per_channel,
+            )
+            task.start()
+            raw = task.read(
+                number_of_samples_per_channel=samples_per_channel,
+                timeout=timeout,
+            )
+        finally:
+            try:
+                task.stop()
+            except nidaqmx.DaqError:
+                pass
+            task.close()
+
+        return self._reshape_read_data(raw=raw, channel_count=len(channels))
 
     def read_input_chunk(
         self,
@@ -422,14 +665,7 @@ class USB6451:
             number_of_samples_per_channel=samples_per_channel,
             timeout=timeout,
         )
-        arr = np.asarray(raw, dtype=np.float64)
-        if arr.ndim == 0:
-            return arr.reshape(1, 1)
-        if arr.ndim == 1:
-            if self._ai_channel_count <= 1:
-                return arr.reshape(1, -1)
-            return arr.reshape(-1, 1)
-        return arr
+        return self._reshape_read_data(raw=raw, channel_count=self._ai_channel_count)
 
     def stop_input(self) -> None:
         """Stop and release the active analog input task.
@@ -465,6 +701,7 @@ class USB6451:
         ao_max_voltage: float = 10.0,
         ai_min_voltage: float = -10.0,
         ai_max_voltage: float = 10.0,
+        input_mode: str = "default",
         ai_terminal_config=None,
     ) -> ContinuousSyncPeriodicConfig:
         """Start synchronized continuous periodic AO output and AI acquisition.
@@ -483,7 +720,11 @@ class USB6451:
             ao_max_voltage: AO upper voltage limit in volts (V).
             ai_min_voltage: AI lower voltage limit in volts (V).
             ai_max_voltage: AI upper voltage limit in volts (V).
+            input_mode: Simple AI wiring mode string. Allowed values:
+                ``"default"``, ``"differential"``, ``"rse"``, ``"nrse"``,
+                ``"pseudodifferential"``.
             ai_terminal_config: Optional NI terminal config passed to AI channels.
+                If provided, it overrides ``input_mode``.
         Output:
             ``ContinuousSyncPeriodicConfig`` containing requested and actual settings.
         Raises:
@@ -492,12 +733,17 @@ class USB6451:
         """
 
         channels = self._normalize_ai_channels(ai_channels)
+        resolved_ai_terminal_config = self._resolve_terminal_config(
+            input_mode=input_mode,
+            terminal_config=ai_terminal_config,
+        )
         self._validate_input_limits(
             device=device,
             ai_channels=channels,
             sample_rate=sample_rate,
             min_voltage=ai_min_voltage,
             max_voltage=ai_max_voltage,
+            terminal_config=resolved_ai_terminal_config,
         )
         if sample_rate > self.MAX_AO_SAMPLE_RATE:
             raise ValueError(
@@ -523,7 +769,7 @@ class USB6451:
         try:
             for ch in channels:
                 physical_channel = ch if "/" in ch else f"{device}/{ch}"
-                if ai_terminal_config is None:
+                if resolved_ai_terminal_config is None:
                     ai_task.ai_channels.add_ai_voltage_chan(
                         physical_channel,
                         min_val=ai_min_voltage,
@@ -534,7 +780,7 @@ class USB6451:
                         physical_channel,
                         min_val=ai_min_voltage,
                         max_val=ai_max_voltage,
-                        terminal_config=ai_terminal_config,
+                        terminal_config=resolved_ai_terminal_config,
                     )
 
             ai_task.timing.cfg_samp_clk_timing(
@@ -590,6 +836,313 @@ class USB6451:
         self._last_sync_config = config
         return config
 
+    def measure_sync_finite(
+        self,
+        *,
+        output_samples: Sequence[float],
+        sample_rate: float,
+        device: str = "Dev1",
+        ao_channel: str = "ao0",
+        ai_channels: str | Sequence[str] = ("ai0",),
+        ao_min_voltage: float = -10.0,
+        ao_max_voltage: float = 10.0,
+        ai_min_voltage: float = -10.0,
+        ai_max_voltage: float = 10.0,
+        input_mode: str = "default",
+        ai_terminal_config=None,
+        timeout: float = 10.0,
+    ) -> np.ndarray:
+        """Run one finite synchronized AO+AI measurement and return raw AI data.
+
+        NI pattern references:
+        - `examples/synchronization/multi_function/ai_ao_sync.py`
+        - `examples/playrec.py`
+
+        Inputs:
+            output_samples: Finite AO waveform to output once, in volts (V).
+            sample_rate: Shared AO/AI sample clock in samples/second (S/s).
+            device: Device name (for example ``"Dev1"``).
+            ao_channel: AO channel name (for example ``"ao0"``).
+            ai_channels: One AI channel name or a sequence of channel names.
+            ao_min_voltage: AO lower voltage limit in volts (V).
+            ao_max_voltage: AO upper voltage limit in volts (V).
+            ai_min_voltage: AI lower voltage limit in volts (V).
+            ai_max_voltage: AI upper voltage limit in volts (V).
+            input_mode: Simple AI wiring mode string. Allowed values:
+                ``"default"``, ``"differential"``, ``"rse"``, ``"nrse"``,
+                ``"pseudodifferential"``.
+            ai_terminal_config: Optional NI terminal config passed to AI channels.
+                If provided, it overrides ``input_mode``.
+            timeout: Read timeout in seconds.
+        Output:
+            ``numpy.ndarray`` with shape ``(channels, len(output_samples))``.
+        Raises:
+            ValueError: Invalid inputs.
+            nidaqmx.DaqError: DAQ configuration/start/read failed.
+        """
+
+        channels = self._normalize_ai_channels(ai_channels)
+        resolved_ai_terminal_config = self._resolve_terminal_config(
+            input_mode=input_mode,
+            terminal_config=ai_terminal_config,
+        )
+        self._validate_input_limits(
+            device=device,
+            ai_channels=channels,
+            sample_rate=sample_rate,
+            min_voltage=ai_min_voltage,
+            max_voltage=ai_max_voltage,
+            terminal_config=resolved_ai_terminal_config,
+        )
+        if sample_rate > self.MAX_AO_SAMPLE_RATE:
+            raise ValueError(
+                "sample_rate exceeds USB-6451 AO limit: "
+                f"{sample_rate:g} > {self.MAX_AO_SAMPLE_RATE:g} S/s."
+            )
+        if not device.strip():
+            raise ValueError("device must not be empty.")
+        if not ao_channel.strip():
+            raise ValueError("ao_channel must not be empty.")
+        if ao_min_voltage >= ao_max_voltage:
+            raise ValueError("ao_min_voltage must be smaller than ao_max_voltage.")
+
+        ao_data = np.asarray(output_samples, dtype=np.float64)
+        if ao_data.ndim != 1:
+            raise ValueError("output_samples must be a one-dimensional list/array.")
+        if ao_data.size < 1:
+            raise ValueError("output_samples must contain at least one sample.")
+        if not np.all(np.isfinite(ao_data)):
+            raise ValueError("output_samples must contain only finite numbers.")
+
+        ao_high = float(np.max(ao_data))
+        ao_low = float(np.min(ao_data))
+        if ao_high > ao_max_voltage or ao_low < ao_min_voltage:
+            raise ValueError(
+                "Output waveform exceeds AO voltage limits: "
+                f"[{ao_low:.3f}, {ao_high:.3f}] V is outside "
+                f"[{ao_min_voltage:.3f}, {ao_max_voltage:.3f}] V."
+            )
+
+        sample_count = int(ao_data.size)
+        ai_task = nidaqmx.Task()
+        ao_task = nidaqmx.Task()
+        try:
+            for ch in channels:
+                physical_channel = ch if "/" in ch else f"{device}/{ch}"
+                if resolved_ai_terminal_config is None:
+                    ai_task.ai_channels.add_ai_voltage_chan(
+                        physical_channel,
+                        min_val=ai_min_voltage,
+                        max_val=ai_max_voltage,
+                    )
+                else:
+                    ai_task.ai_channels.add_ai_voltage_chan(
+                        physical_channel,
+                        min_val=ai_min_voltage,
+                        max_val=ai_max_voltage,
+                        terminal_config=resolved_ai_terminal_config,
+                    )
+
+            ai_task.timing.cfg_samp_clk_timing(
+                rate=sample_rate,
+                sample_mode=AcquisitionType.FINITE,
+                samps_per_chan=sample_count,
+            )
+
+            ao_task.ao_channels.add_ao_voltage_chan(
+                f"{device}/{ao_channel}",
+                min_val=ao_min_voltage,
+                max_val=ao_max_voltage,
+            )
+            ao_task.timing.cfg_samp_clk_timing(
+                rate=sample_rate,
+                sample_mode=AcquisitionType.FINITE,
+                samps_per_chan=sample_count,
+            )
+
+            # NI sync pattern: AO waits for AI start trigger terminal.
+            ao_task.triggers.start_trigger.cfg_dig_edge_start_trig(
+                ai_task.triggers.start_trigger.term
+            )
+            ao_task.write(ao_data, auto_start=False)
+
+            # NI start order: arm AO first, then start AI.
+            ao_task.start()
+            ai_task.start()
+            raw = ai_task.read(
+                number_of_samples_per_channel=sample_count,
+                timeout=timeout,
+            )
+        finally:
+            try:
+                ai_task.stop()
+            except nidaqmx.DaqError:
+                pass
+            try:
+                ao_task.stop()
+            except nidaqmx.DaqError:
+                pass
+            ai_task.close()
+            ao_task.close()
+
+        return self._reshape_read_data(raw=raw, channel_count=len(channels))
+
+    def measure_sine_periods(
+        self,
+        *,
+        periods: int,
+        frequency: float = 10.0,
+        amplitude: float = 1.0,
+        offset: float = 0.0,
+        sample_rate: float = 10_000.0,
+        samples_per_period: Optional[int] = None,
+        device: str = "Dev1",
+        ao_channel: str = "ao0",
+        ai_channels: str | Sequence[str] = ("ai0",),
+        ao_min_voltage: float = -10.0,
+        ao_max_voltage: float = 10.0,
+        ai_min_voltage: float = -10.0,
+        ai_max_voltage: float = 10.0,
+        input_mode: str = "default",
+        ai_terminal_config=None,
+        timeout: float = 10.0,
+    ) -> np.ndarray:
+        """Output a sine on AO and measure a finite number of sine periods on AI.
+
+        Inputs:
+            periods: Number of sine periods to output/measure. Must be >= 1.
+            frequency: Requested sine frequency in hertz (Hz).
+            amplitude: Sine peak amplitude in volts (V).
+            offset: DC offset in volts (V).
+            sample_rate: Shared AO/AI sample rate in samples/second (S/s).
+            samples_per_period: Optional samples used for one sine period.
+                If omitted, method selects:
+                1) regenerative single-period replay when ``sample_rate / frequency``
+                   is integer-like, or
+                2) non-regenerative phase-continuous sample generation otherwise.
+            device: Device name (for example ``"Dev1"``).
+            ao_channel: AO channel name.
+            ai_channels: One AI channel name or a sequence of names.
+            ao_min_voltage: AO lower voltage limit in volts (V).
+            ao_max_voltage: AO upper voltage limit in volts (V).
+            ai_min_voltage: AI lower voltage limit in volts (V).
+            ai_max_voltage: AI upper voltage limit in volts (V).
+            input_mode: Simple AI wiring mode string. Allowed values:
+                ``"default"``, ``"differential"``, ``"rse"``, ``"nrse"``,
+                ``"pseudodifferential"``.
+            ai_terminal_config: Optional NI terminal config passed to AI channels.
+                If provided, it overrides ``input_mode``.
+            timeout: Read timeout in seconds.
+        Output:
+            ``numpy.ndarray`` with shape ``(channels, N)``.
+            ``N`` equals:
+            1) ``periods * samples_per_period`` in regenerative path.
+            2) ``round(periods * sample_rate / frequency)`` in non-regenerative path.
+        Raises:
+            ValueError: Invalid inputs.
+            nidaqmx.DaqError: DAQ configuration/start/read failed.
+        """
+
+        if periods < 1:
+            raise ValueError("periods must be >= 1.")
+
+        validated_device, validated_channel = self._validate_sine_common(
+            device=device,
+            ao_channel=ao_channel,
+            frequency=frequency,
+            amplitude=amplitude,
+            offset=offset,
+            sample_rate=sample_rate,
+            min_voltage=ao_min_voltage,
+            max_voltage=ao_max_voltage,
+        )
+
+        if sample_rate / frequency < 8:
+            raise ValueError(
+                "frequency is too high for this sample_rate. "
+                "Increase sample_rate or lower frequency."
+            )
+
+        if samples_per_period is not None:
+            sine_config = self.get_continuous_sine_output_config(
+                device=validated_device,
+                ao_channel=validated_channel,
+                frequency=frequency,
+                amplitude=amplitude,
+                offset=offset,
+                sample_rate=sample_rate,
+                samples_per_period=samples_per_period,
+                min_voltage=ao_min_voltage,
+                max_voltage=ao_max_voltage,
+            )
+            sine_period = waveforms.sine_period(
+                amplitude=sine_config.amplitude,
+                offset=sine_config.offset,
+                samples_per_period=sine_config.samples_per_period,
+                min_voltage=sine_config.min_voltage,
+                max_voltage=sine_config.max_voltage,
+                max_samples_per_period=self.MAX_REGENERATIVE_PERIOD_SAMPLES,
+            )
+            output_samples = np.tile(sine_period, periods)
+            effective_sample_rate = sine_config.sample_rate
+        else:
+            ratio = sample_rate / frequency
+            nearest = int(round(ratio))
+            tolerance = max(1e-9, 1e-9 * ratio)
+
+            if nearest >= 8 and abs(ratio - nearest) <= tolerance:
+                # Integer-like divider: efficient regenerative one-period replay.
+                sine_config = self.get_continuous_sine_output_config(
+                    device=validated_device,
+                    ao_channel=validated_channel,
+                    frequency=frequency,
+                    amplitude=amplitude,
+                    offset=offset,
+                    sample_rate=sample_rate,
+                    samples_per_period=nearest,
+                    min_voltage=ao_min_voltage,
+                    max_voltage=ao_max_voltage,
+                )
+                sine_period = waveforms.sine_period(
+                    amplitude=sine_config.amplitude,
+                    offset=sine_config.offset,
+                    samples_per_period=sine_config.samples_per_period,
+                    min_voltage=sine_config.min_voltage,
+                    max_voltage=sine_config.max_voltage,
+                    max_samples_per_period=self.MAX_REGENERATIVE_PERIOD_SAMPLES,
+                )
+                output_samples = np.tile(sine_period, periods)
+                effective_sample_rate = sine_config.sample_rate
+            else:
+                # Non-integer divider: generate phase-continuous AO samples.
+                sample_count = int(round(periods * sample_rate / frequency))
+                if sample_count < 1:
+                    sample_count = 1
+                output_samples, _ = self._build_sine_chunk(
+                    frequency=frequency,
+                    amplitude=amplitude,
+                    offset=offset,
+                    sample_rate=sample_rate,
+                    sample_count=sample_count,
+                    phase_in=0.0,
+                )
+                effective_sample_rate = sample_rate
+
+        return self.measure_sync_finite(
+            output_samples=output_samples,
+            sample_rate=effective_sample_rate,
+            device=validated_device,
+            ao_channel=validated_channel,
+            ai_channels=ai_channels,
+            ao_min_voltage=ao_min_voltage,
+            ao_max_voltage=ao_max_voltage,
+            ai_min_voltage=ai_min_voltage,
+            ai_max_voltage=ai_max_voltage,
+            input_mode=input_mode,
+            ai_terminal_config=ai_terminal_config,
+            timeout=timeout,
+        )
+
     def read_sync_input_chunk(
         self,
         *,
@@ -621,14 +1174,7 @@ class USB6451:
             number_of_samples_per_channel=samples_per_channel,
             timeout=timeout,
         )
-        arr = np.asarray(raw, dtype=np.float64)
-        if arr.ndim == 0:
-            return arr.reshape(1, 1)
-        if arr.ndim == 1:
-            if self._sync_ai_channel_count <= 1:
-                return arr.reshape(1, -1)
-            return arr.reshape(-1, 1)
-        return arr
+        return self._reshape_read_data(raw=raw, channel_count=self._sync_ai_channel_count)
 
     def stop_sync_io(self) -> None:
         """Stop and release active synchronized AO+AI tasks.
@@ -795,33 +1341,16 @@ class USB6451:
         Raises:
             ValueError: Invalid input values.
         """
-
-        if not device.strip():
-            raise ValueError("device must not be empty.")
-        if not ao_channel.strip():
-            raise ValueError("ao_channel must not be empty.")
-        if frequency <= 0:
-            raise ValueError("frequency must be > 0.")
-        if amplitude < 0:
-            raise ValueError("amplitude must be >= 0.")
-        if sample_rate <= 0:
-            raise ValueError("sample_rate must be > 0.")
-        if sample_rate > self.MAX_AO_SAMPLE_RATE:
-            raise ValueError(
-                "sample_rate exceeds USB-6451 AO limit: "
-                f"{sample_rate:g} > {self.MAX_AO_SAMPLE_RATE:g} S/s."
-            )
-        if min_voltage >= max_voltage:
-            raise ValueError("min_voltage must be smaller than max_voltage.")
-
-        high = offset + amplitude
-        low = offset - amplitude
-        if high > max_voltage or low < min_voltage:
-            raise ValueError(
-                "Output waveform exceeds voltage limits: "
-                f"[{low:.3f}, {high:.3f}] V is outside "
-                f"[{min_voltage:.3f}, {max_voltage:.3f}] V."
-            )
+        device, ao_channel = self._validate_sine_common(
+            device=device,
+            ao_channel=ao_channel,
+            frequency=frequency,
+            amplitude=amplitude,
+            offset=offset,
+            sample_rate=sample_rate,
+            min_voltage=min_voltage,
+            max_voltage=max_voltage,
+        )
 
         if samples_per_period is None:
             computed_samples_per_period = int(round(sample_rate / frequency))
@@ -846,8 +1375,8 @@ class USB6451:
                 )
 
         return ContinuousSineConfig(
-            device=device.strip(),
-            ao_channel=ao_channel.strip(),
+            device=device,
+            ao_channel=ao_channel,
             requested_frequency=frequency,
             actual_frequency=actual_frequency,
             amplitude=amplitude,
@@ -930,6 +1459,68 @@ class USB6451:
         )
         return config, period_data
 
+    def _validate_sine_common(
+        self,
+        *,
+        device: str,
+        ao_channel: str,
+        frequency: float,
+        amplitude: float,
+        offset: float,
+        sample_rate: float,
+        min_voltage: float,
+        max_voltage: float,
+    ) -> tuple[str, str]:
+        """Validate common sine parameters and return normalized device/channel names."""
+
+        normalized_device = device.strip()
+        normalized_channel = ao_channel.strip()
+        if not normalized_device:
+            raise ValueError("device must not be empty.")
+        if not normalized_channel:
+            raise ValueError("ao_channel must not be empty.")
+        if frequency <= 0:
+            raise ValueError("frequency must be > 0.")
+        if amplitude < 0:
+            raise ValueError("amplitude must be >= 0.")
+        if sample_rate <= 0:
+            raise ValueError("sample_rate must be > 0.")
+        if sample_rate > self.MAX_AO_SAMPLE_RATE:
+            raise ValueError(
+                "sample_rate exceeds USB-6451 AO limit: "
+                f"{sample_rate:g} > {self.MAX_AO_SAMPLE_RATE:g} S/s."
+            )
+        if min_voltage >= max_voltage:
+            raise ValueError("min_voltage must be smaller than max_voltage.")
+
+        high = offset + amplitude
+        low = offset - amplitude
+        if high > max_voltage or low < min_voltage:
+            raise ValueError(
+                "Output waveform exceeds voltage limits: "
+                f"[{low:.3f}, {high:.3f}] V is outside "
+                f"[{min_voltage:.3f}, {max_voltage:.3f}] V."
+            )
+        return normalized_device, normalized_channel
+
+    @staticmethod
+    def _build_sine_chunk(
+        *,
+        frequency: float,
+        amplitude: float,
+        offset: float,
+        sample_rate: float,
+        sample_count: int,
+        phase_in: float,
+    ) -> tuple[np.ndarray, float]:
+        """Generate a phase-continuous sine chunk and return next phase."""
+
+        omega = 2.0 * np.pi * frequency / sample_rate
+        phases = phase_in + omega * np.arange(sample_count, dtype=np.float64)
+        data = offset + amplitude * np.sin(phases)
+        phase_out = float((phase_in + omega * sample_count) % (2.0 * np.pi))
+        return data.astype(np.float64, copy=False), phase_out
+
     @staticmethod
     def _normalize_ai_channels(ai_channels: str | Sequence[str]) -> tuple[str, ...]:
         """Normalize AI channel input to a non-empty tuple of channel strings."""
@@ -950,6 +1541,7 @@ class USB6451:
         sample_rate: float,
         min_voltage: float,
         max_voltage: float,
+        terminal_config,
     ) -> None:
         """Validate continuous AI limits using USB-6451 constraints."""
         if not device.strip():
@@ -957,6 +1549,15 @@ class USB6451:
         if len(ai_channels) > self.MAX_AI_CHANNELS:
             raise ValueError(
                 f"Too many ai_channels: {len(ai_channels)} exceeds {self.MAX_AI_CHANNELS}."
+            )
+        if (
+            terminal_config is not None
+            and terminal_config == TerminalConfiguration.DIFFERENTIAL
+            and len(ai_channels) > self.MAX_AI_DIFF_CHANNELS
+        ):
+            raise ValueError(
+                "Too many ai_channels for differential mode: "
+                f"{len(ai_channels)} exceeds {self.MAX_AI_DIFF_CHANNELS}."
             )
         if sample_rate <= 0:
             raise ValueError("sample_rate must be > 0.")
@@ -967,3 +1568,63 @@ class USB6451:
             )
         if min_voltage >= max_voltage:
             raise ValueError("min_voltage must be smaller than max_voltage.")
+
+    @staticmethod
+    def _reshape_read_data(raw, channel_count: int) -> np.ndarray:
+        """Convert nidaqmx read output to a predictable channels x samples array."""
+        arr = np.asarray(raw, dtype=np.float64)
+        if arr.ndim == 0:
+            return arr.reshape(1, 1)
+        if arr.ndim == 1:
+            if channel_count <= 1:
+                return arr.reshape(1, -1)
+            return arr.reshape(-1, 1)
+        return arr
+
+    def _clear_non_regen_state(self) -> None:
+        """Reset internal non-regenerative sine tracking state."""
+
+        self._non_regen_sine_active = False
+        self._non_regen_phase = 0.0
+        self._non_regen_frequency = 0.0
+        self._non_regen_amplitude = 0.0
+        self._non_regen_offset = 0.0
+        self._non_regen_sample_rate = 0.0
+        self._non_regen_min_voltage = -10.0
+        self._non_regen_max_voltage = 10.0
+
+    @staticmethod
+    def _resolve_terminal_config(*, input_mode: str, terminal_config):
+        """Map a simple input mode string to NI terminal configuration.
+
+        Inputs:
+            input_mode: One of ``"default"``, ``"differential"``, ``"rse"``,
+                ``"nrse"``, ``"pseudodifferential"``.
+            terminal_config: Optional native NI terminal configuration object.
+        Output:
+            Terminal configuration object accepted by DAQmx, or ``None`` for default.
+            If ``terminal_config`` is provided, it is returned unchanged.
+        Raises:
+            ValueError: Unknown input_mode.
+        """
+        if terminal_config is not None:
+            return terminal_config
+
+        mode = str(input_mode).strip().lower()
+        if mode in ("", "default"):
+            return None
+
+        mapping = {
+            "differential": TerminalConfiguration.DIFFERENTIAL,
+            "diff": TerminalConfiguration.DIFFERENTIAL,
+            "rse": TerminalConfiguration.RSE,
+            "nrse": TerminalConfiguration.NRSE,
+            "pseudodifferential": TerminalConfiguration.PSEUDODIFFERENTIAL,
+            "pseudo": TerminalConfiguration.PSEUDODIFFERENTIAL,
+        }
+        if mode not in mapping:
+            raise ValueError(
+                "input_mode must be one of: "
+                "default, differential, rse, nrse, pseudodifferential."
+            )
+        return mapping[mode]

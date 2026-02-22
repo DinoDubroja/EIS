@@ -10,7 +10,7 @@ Repository for EIS measurement scripts and libraries
   - Waveforms demo notebook: `USB6451/Demos/waveforms_demo.ipynb`
   - Continuous AI demo notebook: `USB6451/Demos/analog_input_continuous.ipynb`
   - Waveform helpers: `USB6451/waveforms.py`
-  - Includes AO output, AI input, and low-level synchronized AO+AI APIs
+  - Includes continuous/finite AO+AI APIs, synchronized AO+AI APIs, non-regen sine streaming, and AI input-mode selection
 
 ## Run USB6451 unit tests
 
@@ -20,7 +20,6 @@ python -m unittest discover -s USB6451/tests -p "test_*.py"
 
 ## TODO
 
-* diff mode AI
 * synchronous AO + 2*AI notebook
 * higher-level functions
 * EIS.py

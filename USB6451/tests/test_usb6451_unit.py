@@ -44,9 +44,13 @@ def _install_fake_nidaqmx() -> None:
     class _FakeTiming:
         def __init__(self) -> None:
             self.samp_clk_rate = 0.0
+            self.sample_mode = None
+            self.samps_per_chan = None
 
         def cfg_samp_clk_timing(self, rate, sample_mode=None, samps_per_chan=None):
             self.samp_clk_rate = float(rate)
+            self.sample_mode = sample_mode
+            self.samps_per_chan = samps_per_chan
 
     class _FakeAOChannels:
         def __init__(self) -> None:
@@ -80,6 +84,8 @@ def _install_fake_nidaqmx() -> None:
     class Task:
         """Stub task with basic AO/AI/timing/read/write behavior."""
 
+        created_tasks = []
+
         def __init__(self) -> None:
             self.out_stream = _FakeOutStream()
             self.triggers = _FakeTriggers()
@@ -88,11 +94,14 @@ def _install_fake_nidaqmx() -> None:
             self.ai_channels = _FakeAIChannels()
             self.started = False
             self.closed = False
+            self.write_calls = []
+            Task.created_tasks.append(self)
 
         def write(self, data, auto_start=False):
             if auto_start:
                 self.start()
             arr = np.asarray(data)
+            self.write_calls.append(arr.copy())
             if arr.ndim == 0:
                 return 1
             return int(arr.shape[-1])
@@ -115,14 +124,22 @@ def _install_fake_nidaqmx() -> None:
 
     class AcquisitionType:
         CONTINUOUS = "CONTINUOUS"
+        FINITE = "FINITE"
 
     class RegenerationMode:
         DONT_ALLOW_REGENERATION = "DONT_ALLOW_REGENERATION"
+
+    class TerminalConfiguration:
+        DIFFERENTIAL = "DIFFERENTIAL"
+        RSE = "RSE"
+        NRSE = "NRSE"
+        PSEUDODIFFERENTIAL = "PSEUDODIFFERENTIAL"
 
     fake_nidaqmx.DaqError = DaqError
     fake_nidaqmx.Task = Task
     fake_constants.AcquisitionType = AcquisitionType
     fake_constants.RegenerationMode = RegenerationMode
+    fake_constants.TerminalConfiguration = TerminalConfiguration
 
     sys.modules["nidaqmx"] = fake_nidaqmx
     sys.modules["nidaqmx.constants"] = fake_constants
@@ -153,6 +170,8 @@ class TestUSB6451Unit(unittest.TestCase):
 
     def setUp(self) -> None:
         self.dev = self.USB6451()
+        nidaq_task = sys.modules["nidaqmx"].Task
+        nidaq_task.created_tasks.clear()
 
     # Checks public config preview returns requested/actual values without hardware use.
     def test_get_config_returns_expected_requested_and_actual_values(self) -> None:
@@ -221,6 +240,50 @@ class TestUSB6451Unit(unittest.TestCase):
                 max_voltage=10.0,
             )
 
+    # Checks non-regen sine start disables regeneration and starts AO task.
+    def test_start_continuous_sine_output_non_regen_starts_and_disables_regen(self) -> None:
+        actual = self.dev.start_continuous_sine_output_non_regen(
+            device="Dev1",
+            ao_channel="ao0",
+            frequency=17.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            chunk_samples=250,
+            min_voltage=-10.0,
+            max_voltage=10.0,
+        )
+        self.assertAlmostEqual(actual, 10_000.0)
+        self.assertTrue(self.dev.is_output_running())
+        self.assertEqual(
+            self.dev._ao_task.out_stream.regen_mode,
+            self.mod.RegenerationMode.DONT_ALLOW_REGENERATION,
+        )
+        self.assertEqual(int(self.dev._ao_task.write_calls[0].shape[0]), 250)
+
+    # Checks non-regen sine chunk writer appends data and advances internal phase.
+    def test_write_sine_chunk_non_regen_writes_and_advances_phase(self) -> None:
+        self.dev.start_continuous_sine_output_non_regen(
+            device="Dev1",
+            ao_channel="ao0",
+            frequency=17.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            chunk_samples=100,
+        )
+        phase_before = self.dev._non_regen_phase
+        written = self.dev.write_sine_chunk_non_regen(chunk_samples=120)
+        self.assertEqual(written, 120)
+        self.assertEqual(len(self.dev._ao_task.write_calls), 2)
+        self.assertEqual(int(self.dev._ao_task.write_calls[1].shape[0]), 120)
+        self.assertNotEqual(self.dev._non_regen_phase, phase_before)
+
+    # Checks non-regen sine chunk writer rejects calls before non-regen start.
+    def test_write_sine_chunk_non_regen_requires_active_output(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.dev.write_sine_chunk_non_regen(chunk_samples=100)
+
     # Checks continuous input can start and returns configured sample rate.
     def test_start_continuous_input_returns_actual_sample_rate(self) -> None:
         actual = self.dev.start_continuous_input(
@@ -232,6 +295,32 @@ class TestUSB6451Unit(unittest.TestCase):
         )
         self.assertAlmostEqual(actual, 20_000.0)
         self.assertTrue(self.dev.is_input_running())
+
+    # Checks input_mode="differential" is passed to NI AI channel config.
+    def test_start_continuous_input_applies_differential_mode(self) -> None:
+        self.dev.start_continuous_input(
+            device="Dev1",
+            ai_channels=("ai0",),
+            sample_rate=10_000.0,
+            min_voltage=-10.0,
+            max_voltage=10.0,
+            input_mode="differential",
+        )
+        term_cfg = self.dev._ai_task.ai_channels.channels[0]["terminal_config"]
+        self.assertEqual(term_cfg, self.mod.TerminalConfiguration.DIFFERENTIAL)
+
+    # Checks differential mode rejects more than 8 AI channels (USB-6451 limit).
+    def test_start_continuous_input_rejects_too_many_differential_channels(self) -> None:
+        channels = tuple(f"ai{i}" for i in range(self.dev.MAX_AI_DIFF_CHANNELS + 1))
+        with self.assertRaises(ValueError):
+            self.dev.start_continuous_input(
+                device="Dev1",
+                ai_channels=channels,
+                sample_rate=10_000.0,
+                min_voltage=-10.0,
+                max_voltage=10.0,
+                input_mode="differential",
+            )
 
     # Checks input read chunk returns channels x samples matrix for multi-channel read.
     def test_read_input_chunk_shape_multi_channel(self) -> None:
@@ -249,6 +338,31 @@ class TestUSB6451Unit(unittest.TestCase):
     def test_read_input_chunk_requires_running_task(self) -> None:
         with self.assertRaises(RuntimeError):
             self.dev.read_input_chunk(samples_per_channel=5)
+
+    # Checks finite AI read returns channels x samples array.
+    def test_measure_input_finite_shape_multi_channel(self) -> None:
+        data = self.dev.measure_input_finite(
+            samples_per_channel=6,
+            sample_rate=15_000.0,
+            device="Dev1",
+            ai_channels=("ai0", "ai1"),
+            min_voltage=-10.0,
+            max_voltage=10.0,
+        )
+        self.assertEqual(data.shape, (2, 6))
+
+    # Checks finite AI rejects unknown input mode names.
+    def test_measure_input_finite_rejects_unknown_input_mode(self) -> None:
+        with self.assertRaises(ValueError):
+            self.dev.measure_input_finite(
+                samples_per_channel=6,
+                sample_rate=15_000.0,
+                device="Dev1",
+                ai_channels=("ai0",),
+                min_voltage=-10.0,
+                max_voltage=10.0,
+                input_mode="unsupported",
+            )
 
     # Checks stop_input is safe to call even when no input task exists.
     def test_stop_input_without_task_is_safe(self) -> None:
@@ -281,6 +395,19 @@ class TestUSB6451Unit(unittest.TestCase):
         self.assertAlmostEqual(config.output_frequency, 5_000.0)
         self.assertAlmostEqual(config.actual_sample_rate, 20_000.0)
 
+    # Checks synchronized start applies differential input mode to AI channels.
+    def test_start_continuous_sync_periodic_io_applies_differential_mode(self) -> None:
+        self.dev.start_continuous_sync_periodic_io(
+            period_samples=[0.0, 1.0, 0.0, -1.0],
+            sample_rate=20_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0",),
+            input_mode="differential",
+        )
+        term_cfg = self.dev._sync_ai_task.ai_channels.channels[0]["terminal_config"]
+        self.assertEqual(term_cfg, self.mod.TerminalConfiguration.DIFFERENTIAL)
+
     # Checks synchronized read returns channels x samples matrix.
     def test_read_sync_input_chunk_shape_multi_channel(self) -> None:
         self.dev.start_continuous_sync_periodic_io(
@@ -292,6 +419,90 @@ class TestUSB6451Unit(unittest.TestCase):
         )
         data = self.dev.read_sync_input_chunk(samples_per_channel=5)
         self.assertEqual(data.shape, (2, 5))
+
+    # Checks finite synchronized AO+AI measurement returns channels x samples.
+    def test_measure_sync_finite_shape_multi_channel(self) -> None:
+        data = self.dev.measure_sync_finite(
+            output_samples=[0.0, 1.0, 0.0, -1.0, 0.5, -0.5],
+            sample_rate=10_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        self.assertEqual(data.shape, (2, 6))
+
+    # Checks finite synchronized method wires AO trigger source to AI trigger terminal.
+    def test_measure_sync_finite_trigger_wiring(self) -> None:
+        self.dev.measure_sync_finite(
+            output_samples=[0.0, 1.0, 0.0, -1.0],
+            sample_rate=10_000.0,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0",),
+        )
+        created = sys.modules["nidaqmx"].Task.created_tasks
+        ai_task = created[-2]
+        ao_task = created[-1]
+        self.assertEqual(ao_task.triggers.start_trigger.source, ai_task.triggers.start_trigger.term)
+
+    # Checks sine-period finite measurement returns expected sample count for N periods.
+    def test_measure_sine_periods_returns_expected_shape(self) -> None:
+        data = self.dev.measure_sine_periods(
+            periods=3,
+            frequency=10.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            samples_per_period=1000,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        self.assertEqual(data.shape, (2, 3000))
+
+    # Checks automatic integer-divider path keeps exact period-repeat sample count.
+    def test_measure_sine_periods_integer_divider_auto_shape(self) -> None:
+        data = self.dev.measure_sine_periods(
+            periods=3,
+            frequency=10.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            samples_per_period=None,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        self.assertEqual(data.shape, (2, 3000))
+
+    # Checks automatic non-integer-divider path uses rounded continuous-phase sample count.
+    def test_measure_sine_periods_non_integer_divider_auto_shape(self) -> None:
+        data = self.dev.measure_sine_periods(
+            periods=3,
+            frequency=17.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            samples_per_period=None,
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai1"),
+        )
+        self.assertEqual(data.shape, (2, 1765))
+
+    # Checks sine-period finite measurement rejects non-positive period count.
+    def test_measure_sine_periods_rejects_non_positive_periods(self) -> None:
+        with self.assertRaises(ValueError):
+            self.dev.measure_sine_periods(
+                periods=0,
+                frequency=10.0,
+                amplitude=1.0,
+                offset=0.0,
+                sample_rate=10_000.0,
+                device="Dev1",
+                ao_channel="ao0",
+                ai_channels=("ai0",),
+            )
 
     # Checks synchronized read rejects calls when sync tasks are not running.
     def test_read_sync_input_chunk_requires_running_task(self) -> None:
@@ -397,6 +608,20 @@ class TestUSB6451Unit(unittest.TestCase):
     def test_stop_output_without_task_is_safe(self) -> None:
         self.dev.stop_output()
         self.assertFalse(self.dev.is_output_running())
+
+    # Checks stop_output clears non-regen state when non-regen output is active.
+    def test_stop_output_clears_non_regen_state(self) -> None:
+        self.dev.start_continuous_sine_output_non_regen(
+            device="Dev1",
+            ao_channel="ao0",
+            frequency=17.0,
+            amplitude=1.0,
+            offset=0.0,
+            sample_rate=10_000.0,
+            chunk_samples=100,
+        )
+        self.dev.stop_output()
+        self.assertFalse(self.dev._non_regen_sine_active)
 
 
 if __name__ == "__main__":
