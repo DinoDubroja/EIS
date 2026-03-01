@@ -15,6 +15,7 @@ from eis.models.config_models import (
     SweepConfig,
 )
 from eis.models.measurement_models import (
+    CaptureConditioningConfig,
     DriveAmplitudeResult,
     ExcitationConfig,
     HardwareConfig,
@@ -29,6 +30,7 @@ from eis.models.measurement_models import (
 __all__ = [
     "ConfigValidationError",
     "ConfigValidationIssue",
+    "CaptureConditioningConfig",
     "DriveAmplitudeResult",
     "ExcitationConfig",
     "HardwareConfig",

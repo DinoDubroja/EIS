@@ -117,6 +117,30 @@ class PreflightCheckResult:
 
 
 @dataclass(frozen=True)
+class CaptureConditioningConfig:
+    """Acquisition conditioning settings for settling and leakage handling.
+
+    Inputs:
+        settle_discard_s: Time in seconds discarded from measurement start to
+            remove AO startup transients before analysis.
+        extra_periods_for_trim: Additional whole periods to acquire beyond
+            requested ``N_periods``. These samples provide margin for selecting a
+            periodic window with minimal edge discontinuity.
+        alignment_search_periods: Number of periods searched (after settling
+            discard) to find best periodic window start index.
+    Output:
+        Immutable conditioning configuration used by acquisition runner.
+    Notes:
+        When ``settle_discard_s`` is zero and ``extra_periods_for_trim`` is zero,
+        behavior matches previous direct-capture flow.
+    """
+
+    settle_discard_s: float = 0.02
+    extra_periods_for_trim: int = 1
+    alignment_search_periods: int = 1
+
+
+@dataclass(frozen=True)
 class MeasurementCapture:
     """Raw capture from one frequency and one repeat in a sweep."""
 
@@ -135,6 +159,10 @@ class MeasurementCapture:
     ai_channels: tuple[str, ...]
     ai_range_v: float
     raw_data: np.ndarray
+    acquired_periods: int = 0
+    discarded_settle_samples: int = 0
+    periodic_window_start_sample: int = 0
+    periodic_window_samples: int = 0
 
 
 @dataclass(frozen=True)

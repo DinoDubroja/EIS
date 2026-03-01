@@ -12,6 +12,7 @@ Repository for EIS measurement scripts and libraries
   - Runner/preflight: `eis/acquisition/measurement_runner.py`, `eis/acquisition/preflight_check.py`
   - Current conversion: `eis/acquisition/transconductance.py` (Clarke-Hess 8100)
   - Acquisition models: `eis/models/measurement_models.py`
+  - Processing pipeline: `eis/processing/impedance_processor.py`
   - Storage + metadata report:
     - `eis/storage/folder_layout.py`
     - `eis/storage/run_artifacts.py`
@@ -53,6 +54,7 @@ Metadata report default:
 - RAW artifacts are stored per row/repeat and linked in metadata bank
 - IMPEDANCE artifacts are consolidated in `IMPEDANCE/impedance.csv` (all frequencies + repeats)
 - `IMPEDANCE/summary_mean_std.csv` provides per-frequency repeat statistics
+- Acquisition conditioning supports fixed startup settling discard + periodic trim windowing for FFT leakage control
 
 ## TODO
 

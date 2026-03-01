@@ -17,6 +17,7 @@ from eis.acquisition.preflight_check import run_preflight_check
 from eis.acquisition.usb6451_adapter import USB6451Adapter
 from eis.models.config_models import SweepConfig
 from eis.models.measurement_models import (
+    CaptureConditioningConfig,
     ExcitationConfig,
     HardwareConfig,
     MeasurementCapture,
@@ -39,6 +40,7 @@ def execute_sweep(
     preflight_sample_rate_sps: float | None = None,
     preflight_samples_per_channel: int = 256,
     preflight_ao_test_voltage: float = 0.0,
+    conditioning: CaptureConditioningConfig | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> SweepRunResult:
     """Execute full measurement sweep with repeats in synchronized mode.
@@ -53,6 +55,7 @@ def execute_sweep(
         preflight_sample_rate_sps: Optional sample rate override for preflight.
         preflight_samples_per_channel: Preflight sample count per AI channel.
         preflight_ao_test_voltage: AO test level during preflight in volts (V).
+        conditioning: Settling discard and periodic trim strategy per capture.
         progress_callback: Optional callback for progress updates.
     Output:
         ``SweepRunResult`` with preflight summary and all captures.
@@ -93,6 +96,7 @@ def execute_sweep(
                 point=point,
                 hardware=hardware,
                 excitation=excitation,
+                conditioning=conditioning,
                 repeat_index=repeat_index,
                 samples_per_period=None,
             )

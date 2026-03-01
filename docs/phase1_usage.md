@@ -28,6 +28,7 @@ Error messages include row and column references from Excel to speed up troubles
 ## Execute acquisition sweep (Chunk 2)
 ```python
 from eis import (
+    CaptureConditioningConfig,
     ExcitationConfig,
     HardwareConfig,
     USB6451Adapter,
@@ -58,6 +59,11 @@ result = execute_sweep(
     excitation=excitation,
     repeats=1,
     run_preflight=True,
+    conditioning=CaptureConditioningConfig(
+        settle_discard_s=0.02,      # fixed settling cut at measurement start
+        extra_periods_for_trim=1,   # acquire N+1 periods for periodic trim margin
+        alignment_search_periods=1, # search one period for minimal edge discontinuity
+    ),
     progress_callback=on_progress,
 )
 adapter.close()
@@ -208,3 +214,29 @@ from eis import load_impedance_rows_from_base, load_impedance_rows_from_run
 rows_one_run = load_impedance_rows_from_run("measurements/Z100N34_1_3_2026_14_45")
 rows_many_runs = load_impedance_rows_from_base("measurements")
 ```
+
+## Chunk 6: Real Impedance Processing (FFT or Sine Fit)
+Chunk 6 replaces placeholder impedance values with real extraction from raw captures.
+
+```python
+from eis import (
+    ImpedanceProcessingConfig,
+    compute_impedance_for_run,
+)
+
+impedance_results = compute_impedance_for_run(
+    run_result=result,
+    config=ImpedanceProcessingConfig(
+        method="fft",                 # or "sine_fit"
+        sine_fit_backend="numpy_lstsq",  # or "scipy_least_squares"
+        filter_mode="lowpass",        # "none", "lowpass", "bandpass"
+        lowpass_cutoff_hz=2000.0,
+        shunt_resistance_ohm=0.008,   # nominal 8 mOhm
+    ),
+)
+```
+
+Notes:
+- Current channel is interpreted as shunt voltage (`I = V_shunt / R_shunt_nominal`).
+- DUT channel is interpreted as DUT voltage (`Z = V_dut / I`).
+- Uncertainty propagation (Type A/Type B) is intentionally deferred to later chunk.

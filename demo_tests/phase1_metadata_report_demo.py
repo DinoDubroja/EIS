@@ -16,11 +16,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from eis import (
+    CaptureConditioningConfig,
     ExcitationConfig,
     HardwareConfig,
-    ImpedancePointResult,
+    ImpedanceProcessingConfig,
     build_artifact_link_payload,
     build_metadata_bank,
+    compute_impedance_for_run,
     create_run_folder_layout,
     execute_sweep,
     load_impedance_rows_from_run,
@@ -32,7 +34,7 @@ from eis import (
     write_metadata_report_html,
     write_metadata_report_pdf,
 )
-from eis.models.measurement_models import PreflightCheckResult, SweepRunResult
+from eis.models.measurement_models import PreflightCheckResult
 
 import numpy as np
 
@@ -50,40 +52,34 @@ class FakeAdapter:
         )
 
     def measure_sine_point(self, **kwargs):
-        n = int(kwargs["n_periods"]) * 10
-        t = np.arange(n, dtype=np.float64)
-        ch1 = 0.05 * np.sin(2 * np.pi * t / n)
-        ch2 = 0.07 * np.sin(2 * np.pi * t / n + 0.2)
-        return np.vstack([ch1, ch2])
+        frequency_hz = float(kwargs["frequency_hz"])
+        sample_rate_sps = float(kwargs["sample_rate_sps"])
+        sample_count = int(round(float(kwargs["n_periods"]) * sample_rate_sps / frequency_hz))
+        sample_count = max(64, sample_count)
 
+        t = np.arange(sample_count, dtype=np.float64) / sample_rate_sps
+        omega = 2.0 * np.pi * frequency_hz
 
-def _build_demo_impedance_results(run_result: SweepRunResult) -> tuple[ImpedancePointResult, ...]:
-    """Create deterministic placeholder impedance results for storage demo."""
+        # Demo synthesis: nominal current waveform on CH1 via shunt voltage.
+        i_peak_a = 1.6
+        i_phase_rad = 0.15
+        r_shunt_ohm = 0.008
+        v_shunt = (r_shunt_ohm * i_peak_a) * np.sin(omega * t + i_phase_rad)
 
-    results: list[ImpedancePointResult] = []
-    for capture in run_result.captures:
-        z_real = 100.0 + 0.5 * capture.row_number + 0.2 * capture.repeat_index
-        z_imag = -0.25 * capture.frequency_hz + 0.1 * capture.repeat_index
-        z_mag = float(np.hypot(z_real, z_imag))
-        z_phase_deg = float(np.degrees(np.arctan2(z_imag, z_real)))
-        results.append(
-            ImpedancePointResult(
-                row_number=capture.row_number,
-                repeat_index=capture.repeat_index,
-                frequency_hz=capture.frequency_hz,
-                z_real_ohm=z_real,
-                z_imag_ohm=z_imag,
-                z_magnitude_ohm=z_mag,
-                z_phase_deg=z_phase_deg,
-                extraction_method="demo_placeholder",
-                notes="Demo value generated without full processing pipeline.",
-            )
-        )
-    return tuple(results)
+        # DUT channel follows known impedance phasor for deterministic processing demo.
+        z_dut = 5.0 + 1.2j
+        v_dut_peak = i_peak_a * abs(z_dut)
+        v_dut_phase = i_phase_rad + float(np.angle(z_dut))
+        v_dut = v_dut_peak * np.sin(omega * t + v_dut_phase)
+
+        # Add small deterministic harmonic + dc terms so filter options are visible.
+        v_shunt = v_shunt + 0.0008 * np.sin(3.0 * omega * t) + 0.0003
+        v_dut = v_dut + 0.03 * np.sin(3.0 * omega * t + 0.2) - 0.005
+        return np.vstack([v_shunt, v_dut])
 
 
 def main() -> None:
-    """Run fake sweep and write run artifacts plus metadata/report outputs."""
+    """Run fake sweep, process impedance, and write artifacts/reports."""
 
     sweep = load_and_validate_config(REPO_ROOT / "config_examples" / "config_phase1_example.xlsx")
     sweep = type(sweep)(
@@ -103,6 +99,11 @@ def main() -> None:
         excitation=excitation,
         repeats=2,
         run_preflight=True,
+        conditioning=CaptureConditioningConfig(
+            settle_discard_s=0.02,
+            extra_periods_for_trim=1,
+            alignment_search_periods=1,
+        ),
     )
 
     demo_serial_number = f"DEMO_META_{datetime.now().strftime('%H%M%S')}"
@@ -113,7 +114,15 @@ def main() -> None:
         started_at_local=datetime.now(),
     )
 
-    impedance_results = _build_demo_impedance_results(run_result)
+    impedance_results = compute_impedance_for_run(
+        run_result=run_result,
+        config=ImpedanceProcessingConfig(
+            method="fft",
+            filter_mode="lowpass",
+            lowpass_cutoff_hz=2000.0,
+            shunt_resistance_ohm=0.008,
+        ),
+    )
     persisted = persist_run_artifacts(
         layout=layout,
         run_result=run_result,

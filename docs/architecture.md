@@ -33,6 +33,7 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
   - `sweep_controller.py`: sweep loop with repeats + progress callback
   - `transconductance.py`: Clarke-Hess 8100 range selection + `I_rms -> AO amplitude` conversion
 - `eis/models/measurement_models.py`: acquisition result/progress models
+  - includes `CaptureConditioningConfig` for settling/leakage control
 - `eis/storage/` now includes:
   - `naming.py`: naming helpers (`SERIAL_D_M_Y_H_M`)
   - `folder_layout.py`: collision-safe run folder creation
@@ -45,5 +46,11 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
     - preferred default view: `REPORTS/metadata_report.html`
     - optional PDF view generated from same bank
     - `description.txt` generated only when user provided non-empty description
+- `eis/processing/` now includes:
+  - `impedance_processor.py`: processing pipeline for:
+    - optional filtering (`none`/`lowpass`/`bandpass`)
+    - extraction method selection (`fft` or `sine_fit`)
+    - sine-fit backend selection (`numpy_lstsq` or `scipy_least_squares`)
+    - nominal shunt conversion (`R_shunt = 0.008 ohm`) and complex impedance output
 - Next chunk:
-  - processing pipeline (filtering, FFT, fitting, impedance extraction) to replace demo placeholder impedance values in artifact files.
+  - plotting API from both in-memory objects and persisted artifacts.

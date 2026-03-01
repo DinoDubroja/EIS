@@ -72,6 +72,10 @@ def build_metadata_bank(
                 "ai_channels": list(capture.ai_channels),
                 "ai_range_v": capture.ai_range_v,
                 "raw_shape": [int(capture.raw_data.shape[0]), int(capture.raw_data.shape[1])],
+                "acquired_periods": capture.acquired_periods,
+                "discarded_settle_samples": capture.discarded_settle_samples,
+                "periodic_window_start_sample": capture.periodic_window_start_sample,
+                "periodic_window_samples": capture.periodic_window_samples,
                 "raw_csv_relpath": (
                     str(link["raw_csv_relpath"]) if link is not None else None
                 ),
@@ -169,6 +173,10 @@ def write_metadata_bank_csv(metadata_bank: dict[str, Any], output_path: str | Pa
         "ai_channels",
         "ai_range_v",
         "raw_shape",
+        "acquired_periods",
+        "discarded_settle_samples",
+        "periodic_window_start_sample",
+        "periodic_window_samples",
         "raw_csv_relpath",
         "impedance_csv_relpath",
     ]
