@@ -1,13 +1,13 @@
-"""Persistence helpers for repeat-aware RAW and IMPEDANCE run artifacts.
+"""Persistence helpers for repeat-aware RAW and consolidated IMPEDANCE artifacts.
 
 This module is the file-output backbone for measurement reproducibility.
 It writes:
-- one RAW file per sweep point and repeat
-- one IMPEDANCE file per sweep point and repeat
-- one ``summary_mean_std.csv`` per sweep point across repeats
+- one RAW file per sweep point and repeat (organized in point folders)
+- one consolidated ``IMPEDANCE/impedance.csv`` for all sweep rows/repeats
+- one consolidated ``IMPEDANCE/summary_mean_std.csv`` with per-frequency stats
 
-The same saved files are also indexable through metadata linkage records so
-reports and future statistics APIs can rebuild views from disk artifacts only.
+The same saved files are indexable through metadata linkage records so reports
+and future statistics APIs can rebuild views directly from disk artifacts.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import csv
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
 
 import numpy as np
@@ -27,6 +28,9 @@ from eis.models.measurement_models import (
 )
 from eis.storage.folder_layout import RunFolderLayout
 from eis.storage.naming import build_point_folder_name, build_repeat_file_stem
+
+
+_SAFE_TOKEN_PATTERN = re.compile(r"[^A-Za-z0-9]+")
 
 
 @dataclass(frozen=True)
@@ -42,7 +46,7 @@ class CaptureArtifactRecord:
 
 @dataclass(frozen=True)
 class PointSummaryArtifactRecord:
-    """File linkage record for one repeat-summary file at one frequency point."""
+    """Linkage record for one frequency summary row in summary table."""
 
     row_number: int
     frequency_hz: float
@@ -62,6 +66,26 @@ def _as_relpath(path: Path, root: Path) -> str:
     """Convert absolute path into POSIX relative path from run root."""
 
     return path.relative_to(root).as_posix()
+
+
+def _safe_token(text: str) -> str:
+    """Convert free text into a file-name-safe token."""
+
+    cleaned = _SAFE_TOKEN_PATTERN.sub("_", text.strip()).strip("_")
+    return cleaned or "unknown"
+
+
+def _build_raw_channel_suffix(ai_channels: tuple[str, ...]) -> str:
+    """Build channel suffix used in RAW file names.
+
+    Example:
+        ``("ai0", "ai7") -> "ch1_ai0_ch2_ai7"``
+    """
+
+    parts = []
+    for index, channel_name in enumerate(ai_channels, start=1):
+        parts.append(f"ch{index}_{_safe_token(channel_name)}")
+    return "_".join(parts)
 
 
 def write_raw_capture_csv(
@@ -107,12 +131,15 @@ def write_raw_capture_csv(
     return path
 
 
-def write_impedance_repeat_csv(
+def write_impedance_table_csv(
     *,
-    result: ImpedancePointResult,
+    results: tuple[ImpedancePointResult, ...] | list[ImpedancePointResult],
     output_path: str | Path,
 ) -> Path:
-    """Write one impedance result row for one frequency/repeat."""
+    """Write consolidated impedance table with one row per frequency/repeat."""
+
+    if not results:
+        raise ValueError("results must contain at least one impedance row.")
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,19 +159,20 @@ def write_impedance_repeat_csv(
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerow(
-            {
-                "row_number": result.row_number,
-                "repeat_index": result.repeat_index,
-                "frequency_hz": f"{result.frequency_hz:.12g}",
-                "z_real_ohm": f"{result.z_real_ohm:.12g}",
-                "z_imag_ohm": f"{result.z_imag_ohm:.12g}",
-                "z_magnitude_ohm": f"{result.z_magnitude_ohm:.12g}",
-                "z_phase_deg": f"{result.z_phase_deg:.12g}",
-                "extraction_method": result.extraction_method,
-                "notes": result.notes or "",
-            }
-        )
+        for result in sorted(results, key=lambda item: (item.row_number, item.repeat_index)):
+            writer.writerow(
+                {
+                    "row_number": result.row_number,
+                    "repeat_index": result.repeat_index,
+                    "frequency_hz": f"{result.frequency_hz:.12g}",
+                    "z_real_ohm": f"{result.z_real_ohm:.12g}",
+                    "z_imag_ohm": f"{result.z_imag_ohm:.12g}",
+                    "z_magnitude_ohm": f"{result.z_magnitude_ohm:.12g}",
+                    "z_phase_deg": f"{result.z_phase_deg:.12g}",
+                    "extraction_method": result.extraction_method,
+                    "notes": result.notes or "",
+                }
+            )
 
     return path
 
@@ -159,31 +187,20 @@ def _sample_std(values: np.ndarray) -> float:
 
 def write_impedance_summary_mean_std_csv(
     *,
-    point_results: list[ImpedancePointResult],
+    results: tuple[ImpedancePointResult, ...] | list[ImpedancePointResult],
     output_path: str | Path,
 ) -> Path:
-    """Write one per-point repeat summary with mean/std columns.
+    """Write consolidated per-frequency repeat summary with mean/std columns.
 
     The standard deviation is calculated as sample standard deviation (ddof=1)
     when at least two repeats are available.
     """
 
-    if not point_results:
-        raise ValueError("point_results must contain at least one impedance result.")
-
-    row_numbers = {item.row_number for item in point_results}
-    frequencies = {item.frequency_hz for item in point_results}
-    if len(row_numbers) != 1 or len(frequencies) != 1:
-        raise ValueError("All point_results must belong to the same row/frequency.")
+    if not results:
+        raise ValueError("results must contain at least one impedance row.")
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-
-    z_real = np.asarray([item.z_real_ohm for item in point_results], dtype=np.float64)
-    z_imag = np.asarray([item.z_imag_ohm for item in point_results], dtype=np.float64)
-    z_mag = np.asarray([item.z_magnitude_ohm for item in point_results], dtype=np.float64)
-    z_phase = np.asarray([item.z_phase_deg for item in point_results], dtype=np.float64)
-    methods = sorted({item.extraction_method for item in point_results})
 
     fieldnames = [
         "row_number",
@@ -203,22 +220,37 @@ def write_impedance_summary_mean_std_csv(
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerow(
-            {
-                "row_number": point_results[0].row_number,
-                "frequency_hz": f"{point_results[0].frequency_hz:.12g}",
-                "repeat_count": len(point_results),
-                "extraction_methods": ";".join(methods),
-                "z_real_mean_ohm": f"{float(np.mean(z_real)):.12g}",
-                "z_real_std_ohm": f"{_sample_std(z_real):.12g}",
-                "z_imag_mean_ohm": f"{float(np.mean(z_imag)):.12g}",
-                "z_imag_std_ohm": f"{_sample_std(z_imag):.12g}",
-                "z_magnitude_mean_ohm": f"{float(np.mean(z_mag)):.12g}",
-                "z_magnitude_std_ohm": f"{_sample_std(z_mag):.12g}",
-                "z_phase_mean_deg": f"{float(np.mean(z_phase)):.12g}",
-                "z_phase_std_deg": f"{_sample_std(z_phase):.12g}",
-            }
-        )
+
+        grouped: dict[tuple[int, float], list[ImpedancePointResult]] = defaultdict(list)
+        for item in results:
+            grouped[(item.row_number, item.frequency_hz)].append(item)
+
+        for (row_number, frequency_hz), point_results in sorted(
+            grouped.items(),
+            key=lambda item: (item[0][0], item[0][1]),
+        ):
+            z_real = np.asarray([item.z_real_ohm for item in point_results], dtype=np.float64)
+            z_imag = np.asarray([item.z_imag_ohm for item in point_results], dtype=np.float64)
+            z_mag = np.asarray([item.z_magnitude_ohm for item in point_results], dtype=np.float64)
+            z_phase = np.asarray([item.z_phase_deg for item in point_results], dtype=np.float64)
+            methods = sorted({item.extraction_method for item in point_results})
+
+            writer.writerow(
+                {
+                    "row_number": row_number,
+                    "frequency_hz": f"{frequency_hz:.12g}",
+                    "repeat_count": len(point_results),
+                    "extraction_methods": ";".join(methods),
+                    "z_real_mean_ohm": f"{float(np.mean(z_real)):.12g}",
+                    "z_real_std_ohm": f"{_sample_std(z_real):.12g}",
+                    "z_imag_mean_ohm": f"{float(np.mean(z_imag)):.12g}",
+                    "z_imag_std_ohm": f"{_sample_std(z_imag):.12g}",
+                    "z_magnitude_mean_ohm": f"{float(np.mean(z_mag)):.12g}",
+                    "z_magnitude_std_ohm": f"{_sample_std(z_mag):.12g}",
+                    "z_phase_mean_deg": f"{float(np.mean(z_phase)):.12g}",
+                    "z_phase_std_deg": f"{_sample_std(z_phase):.12g}",
+                }
+            )
 
     return path
 
@@ -260,24 +292,33 @@ def persist_run_artifacts(
             f"{sorted(unknown_keys)}"
         )
 
+    impedance_table_path: Path | None = None
+    summary_table_path: Path | None = None
+    impedance_table_relpath: str | None = None
+    summary_table_relpath: str | None = None
+    if impedance_map:
+        impedance_table_path = layout.impedance / "impedance.csv"
+        summary_table_path = layout.impedance / "summary_mean_std.csv"
+        impedance_table_relpath = _as_relpath(impedance_table_path, layout.root)
+        summary_table_relpath = _as_relpath(summary_table_path, layout.root)
+
     capture_records: list[CaptureArtifactRecord] = []
-    point_groups: dict[tuple[int, float], list[ImpedancePointResult]] = defaultdict(list)
+    ordered_impedance_rows: list[ImpedancePointResult] = []
+    grouped_repeats: dict[tuple[int, float], int] = defaultdict(int)
 
     for capture in run_result.captures:
         point_folder_name = build_point_folder_name(capture.row_number, capture.frequency_hz)
         repeat_stem = build_repeat_file_stem(capture.repeat_index)
+        channel_suffix = _build_raw_channel_suffix(capture.ai_channels)
 
-        raw_path = layout.raw / point_folder_name / f"{repeat_stem}_raw.csv"
+        raw_path = layout.raw / point_folder_name / f"{repeat_stem}_raw_{channel_suffix}.csv"
         write_raw_capture_csv(capture=capture, output_path=raw_path)
 
-        impedance_relpath: str | None = None
         key = (capture.row_number, capture.repeat_index)
         impedance_result = impedance_map.get(key)
         if impedance_result is not None:
-            impedance_path = layout.impedance / point_folder_name / f"{repeat_stem}_impedance.csv"
-            write_impedance_repeat_csv(result=impedance_result, output_path=impedance_path)
-            impedance_relpath = _as_relpath(impedance_path, layout.root)
-            point_groups[(capture.row_number, capture.frequency_hz)].append(impedance_result)
+            ordered_impedance_rows.append(impedance_result)
+            grouped_repeats[(capture.row_number, capture.frequency_hz)] += 1
 
         capture_records.append(
             CaptureArtifactRecord(
@@ -285,29 +326,31 @@ def persist_run_artifacts(
                 repeat_index=capture.repeat_index,
                 frequency_hz=capture.frequency_hz,
                 raw_csv_relpath=_as_relpath(raw_path, layout.root),
-                impedance_csv_relpath=impedance_relpath,
+                impedance_csv_relpath=(
+                    impedance_table_relpath if impedance_result is not None else None
+                ),
             )
         )
 
     point_summaries: list[PointSummaryArtifactRecord] = []
-    for (row_number, frequency_hz), point_results in sorted(
-        point_groups.items(),
-        key=lambda item: (item[0][0], item[0][1]),
-    ):
-        point_folder_name = build_point_folder_name(row_number, frequency_hz)
-        summary_path = layout.impedance / point_folder_name / "summary_mean_std.csv"
+    if ordered_impedance_rows:
+        write_impedance_table_csv(results=ordered_impedance_rows, output_path=impedance_table_path)
         write_impedance_summary_mean_std_csv(
-            point_results=point_results,
-            output_path=summary_path,
+            results=ordered_impedance_rows,
+            output_path=summary_table_path,
         )
-        point_summaries.append(
-            PointSummaryArtifactRecord(
-                row_number=row_number,
-                frequency_hz=frequency_hz,
-                repeat_count=len(point_results),
-                summary_csv_relpath=_as_relpath(summary_path, layout.root),
+        for (row_number, frequency_hz), repeat_count in sorted(
+            grouped_repeats.items(),
+            key=lambda item: (item[0][0], item[0][1]),
+        ):
+            point_summaries.append(
+                PointSummaryArtifactRecord(
+                    row_number=row_number,
+                    frequency_hz=frequency_hz,
+                    repeat_count=repeat_count,
+                    summary_csv_relpath=str(summary_table_relpath),
+                )
             )
-        )
 
     return PersistedRunArtifacts(
         capture_artifacts=tuple(capture_records),
@@ -359,7 +402,13 @@ def _parse_impedance_csv_row(row: dict[str, str]) -> dict[str, Any]:
 
 
 def load_impedance_rows_from_run(run_root: str | Path) -> list[dict[str, Any]]:
-    """Load all per-repeat impedance rows from one run folder."""
+    """Load impedance rows from one run folder.
+
+    Preferred format:
+        ``IMPEDANCE/impedance.csv`` (one table for all rows/repeats).
+    Legacy fallback:
+        ``IMPEDANCE/row_*/repeat_*_impedance.csv``.
+    """
 
     root = Path(run_root)
     impedance_root = root / "IMPEDANCE"
@@ -367,8 +416,14 @@ def load_impedance_rows_from_run(run_root: str | Path) -> list[dict[str, Any]]:
         return []
 
     rows: list[dict[str, Any]] = []
-    pattern = "row_*_f*Hz/repeat_*_impedance.csv"
-    for file_path in sorted(impedance_root.glob(pattern)):
+
+    consolidated_path = impedance_root / "impedance.csv"
+    if consolidated_path.exists():
+        file_paths = [consolidated_path]
+    else:
+        file_paths = sorted(impedance_root.glob("row_*_f*Hz/repeat_*_impedance.csv"))
+
+    for file_path in file_paths:
         with file_path.open("r", newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
             for row in reader:

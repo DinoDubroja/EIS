@@ -38,8 +38,8 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
   - `folder_layout.py`: collision-safe run folder creation
   - `run_artifacts.py`: repeat-aware RAW/IMPEDANCE persistence
     - one raw file per frequency+repeat
-    - one impedance file per frequency+repeat
-    - one `summary_mean_std.csv` per frequency for repeat statistics
+    - one consolidated `IMPEDANCE/impedance.csv` with all frequencies + repeats
+    - one consolidated `IMPEDANCE/summary_mean_std.csv` with per-frequency repeat statistics
     - folder loaders to read saved impedance rows from one run or all runs under a base path
   - `metadata_writer.py`: metadata bank + report generation
     - preferred default view: `REPORTS/metadata_report.html`

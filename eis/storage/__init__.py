@@ -27,7 +27,7 @@ from eis.storage.run_artifacts import (
     load_impedance_rows_from_base,
     load_impedance_rows_from_run,
     persist_run_artifacts,
-    write_impedance_repeat_csv,
+    write_impedance_table_csv,
     write_impedance_summary_mean_std_csv,
     write_raw_capture_csv,
 )
@@ -47,7 +47,7 @@ __all__ = [
     "regenerate_reports_from_bank",
     "sanitize_serial_number",
     "write_description_file",
-    "write_impedance_repeat_csv",
+    "write_impedance_table_csv",
     "write_impedance_summary_mean_std_csv",
     "write_metadata_bank_csv",
     "write_metadata_bank_txt",

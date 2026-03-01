@@ -50,8 +50,9 @@ python demo_tests/phase1_metadata_report_demo.py
 Metadata report default:
 - HTML report in `REPORTS/metadata_report.html`
 - PDF generation is optional and can be regenerated from metadata bank
-- RAW/IMPEDANCE artifacts are stored per row/repeat and linked in metadata bank
-- Repeat summary files (`summary_mean_std.csv`) are generated per frequency point
+- RAW artifacts are stored per row/repeat and linked in metadata bank
+- IMPEDANCE artifacts are consolidated in `IMPEDANCE/impedance.csv` (all frequencies + repeats)
+- `IMPEDANCE/summary_mean_std.csv` provides per-frequency repeat statistics
 
 ## TODO
 

@@ -99,8 +99,8 @@ class TestStorageMetadataWriterUnit(unittest.TestCase):
                     "row_number": 2,
                     "repeat_index": 1,
                     "frequency_hz": 12.54,
-                    "raw_csv_relpath": "RAW/row_0002_f12_54Hz/repeat_001_raw.csv",
-                    "impedance_csv_relpath": "IMPEDANCE/row_0002_f12_54Hz/repeat_001_impedance.csv",
+                    "raw_csv_relpath": "RAW/row_0002_f12_54Hz/repeat_001_raw_ch1_ai0_ch2_ai7.csv",
+                    "impedance_csv_relpath": "IMPEDANCE/impedance.csv",
                 }
             ],
             point_summaries=[
@@ -108,7 +108,7 @@ class TestStorageMetadataWriterUnit(unittest.TestCase):
                     "row_number": 2,
                     "frequency_hz": 12.54,
                     "repeat_count": 1,
-                    "summary_csv_relpath": "IMPEDANCE/row_0002_f12_54Hz/summary_mean_std.csv",
+                    "summary_csv_relpath": "IMPEDANCE/summary_mean_std.csv",
                 }
             ],
         )
@@ -117,11 +117,11 @@ class TestStorageMetadataWriterUnit(unittest.TestCase):
         self.assertEqual(len(bank["captures"]), 1)
         self.assertEqual(
             bank["captures"][0]["raw_csv_relpath"],
-            "RAW/row_0002_f12_54Hz/repeat_001_raw.csv",
+            "RAW/row_0002_f12_54Hz/repeat_001_raw_ch1_ai0_ch2_ai7.csv",
         )
         self.assertEqual(
             bank["captures"][0]["impedance_csv_relpath"],
-            "IMPEDANCE/row_0002_f12_54Hz/repeat_001_impedance.csv",
+            "IMPEDANCE/impedance.csv",
         )
         self.assertEqual(bank["artifacts"]["point_summary_count"], 1)
 

@@ -152,7 +152,7 @@ def main() -> None:
     print("Metadata demo completed")
     print(f"Run folder: {layout.root}")
     print(f"Persisted raw captures: {len(persisted.capture_artifacts)}")
-    print(f"Persisted summary files: {len(persisted.point_summaries)}")
+    print(f"Persisted summary rows: {len(persisted.point_summaries)}")
     print(f"Loaded impedance rows from disk: {len(loaded_rows)}")
     print(f"Metadata bank txt: {txt_path}")
     print(f"Metadata measurements csv: {csv_path}")

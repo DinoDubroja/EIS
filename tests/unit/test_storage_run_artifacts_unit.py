@@ -1,8 +1,8 @@
 """Unit tests for repeat-aware RAW/IMPEDANCE artifact persistence.
 
 These tests verify that:
-- one file is written per repeat for raw and impedance outputs
-- per-point ``summary_mean_std.csv`` is generated for repeat statistics
+- one file is written per repeat for RAW outputs
+- consolidated ``impedance.csv`` and ``summary_mean_std.csv`` are generated
 - saved impedance files can be loaded back from one run or many run folders
 """
 
@@ -97,18 +97,28 @@ class TestStorageRunArtifactsUnit(unittest.TestCase):
 
             for item in persisted.capture_artifacts:
                 self.assertTrue((layout.root / item.raw_csv_relpath).exists())
+                self.assertIn("_raw_ch1_ai0_ch2_ai7.csv", item.raw_csv_relpath)
                 self.assertIsNotNone(item.impedance_csv_relpath)
                 self.assertTrue((layout.root / str(item.impedance_csv_relpath)).exists())
+                self.assertEqual(str(item.impedance_csv_relpath), "IMPEDANCE/impedance.csv")
 
             for summary in persisted.point_summaries:
                 self.assertTrue((layout.root / summary.summary_csv_relpath).exists())
+                self.assertEqual(summary.summary_csv_relpath, "IMPEDANCE/summary_mean_std.csv")
 
-            summary_row2 = layout.impedance / "row_0002_f10Hz" / "summary_mean_std.csv"
-            with summary_row2.open("r", newline="", encoding="utf-8") as handle:
-                row = next(csv.DictReader(handle))
-            self.assertEqual(int(row["repeat_count"]), 2)
-            self.assertAlmostEqual(float(row["z_real_mean_ohm"]), 101.0, places=9)
-            self.assertAlmostEqual(float(row["z_real_std_ohm"]), np.sqrt(2.0), places=9)
+            summary_table = layout.impedance / "summary_mean_std.csv"
+            with summary_table.open("r", newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+            row_2 = next(row for row in rows if int(row["row_number"]) == 2)
+            self.assertEqual(int(row_2["repeat_count"]), 2)
+            self.assertAlmostEqual(float(row_2["z_real_mean_ohm"]), 101.0, places=9)
+            self.assertAlmostEqual(float(row_2["z_real_std_ohm"]), np.sqrt(2.0), places=9)
+
+            impedance_table = layout.impedance / "impedance.csv"
+            with impedance_table.open("r", newline="", encoding="utf-8") as handle:
+                impedance_rows = list(csv.DictReader(handle))
+            self.assertEqual(len(impedance_rows), 4)
+            self.assertIn("frequency_hz", impedance_rows[0])
 
             run_rows = load_impedance_rows_from_run(layout.root)
             self.assertEqual(len(run_rows), 4)

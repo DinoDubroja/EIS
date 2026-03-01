@@ -194,10 +194,11 @@ write_metadata_report_html(metadata_bank, layout.reports / "metadata_report.html
 ```
 
 Repeat file organization:
-- `RAW/row_0002_f10Hz/repeat_001_raw.csv`
-- `IMPEDANCE/row_0002_f10Hz/repeat_001_impedance.csv`
-- `IMPEDANCE/row_0002_f10Hz/summary_mean_std.csv`
+- `RAW/row_0002_f10Hz/repeat_001_raw_ch1_ai0_ch2_ai7.csv`
+- `IMPEDANCE/impedance.csv`
+- `IMPEDANCE/summary_mean_std.csv`
 
+`impedance.csv` contains all frequencies/repeats in one table.
 `summary_mean_std.csv` is designed to support later Type A uncertainty workflows based on repeats.
 
 ## Load Saved Impedance Rows (Preparation for folder-level statistics)
