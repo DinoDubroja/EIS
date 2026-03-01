@@ -504,6 +504,37 @@ class TestUSB6451Unit(unittest.TestCase):
                 ai_channels=("ai0",),
             )
 
+    # Checks synchronized connection preflight returns expected shape summary.
+    def test_validate_sync_connection_returns_expected_shape(self) -> None:
+        result = self.dev.validate_sync_connection(
+            device="Dev1",
+            ao_channel="ao0",
+            ai_channels=("ai0", "ai7"),
+            sample_rate=20_000.0,
+            samples_per_channel=64,
+            ao_test_voltage=0.0,
+            input_mode="differential",
+        )
+        self.assertEqual(result.device, "Dev1")
+        self.assertEqual(result.ao_channel, "ao0")
+        self.assertEqual(result.ai_channels, ("ai0", "ai7"))
+        self.assertEqual(result.samples_per_channel, 64)
+        self.assertEqual(result.measured_shape, (2, 64))
+
+    # Checks synchronized connection preflight rejects AO test voltage outside limits.
+    def test_validate_sync_connection_rejects_test_voltage_outside_limits(self) -> None:
+        with self.assertRaises(ValueError):
+            self.dev.validate_sync_connection(
+                device="Dev1",
+                ao_channel="ao0",
+                ai_channels=("ai0",),
+                sample_rate=20_000.0,
+                samples_per_channel=64,
+                ao_test_voltage=11.0,
+                ao_min_voltage=-10.0,
+                ao_max_voltage=10.0,
+            )
+
     # Checks synchronized read rejects calls when sync tasks are not running.
     def test_read_sync_input_chunk_requires_running_task(self) -> None:
         with self.assertRaises(RuntimeError):

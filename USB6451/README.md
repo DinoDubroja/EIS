@@ -58,12 +58,27 @@ High-level helper class for NI USB-6451 control.
   - If `sample_rate / frequency` is integer-like, uses periodic replay samples.
   - Otherwise uses phase-continuous non-regenerative style samples.
   - Returns raw AI data with shape `(channels, N)`, where `N` depends on chosen path.
+- `validate_sync_connection(...)`
+  - Runs a short synchronized AO+AI preflight check for USB-6451 connectivity.
+  - Uses a constant AO test level and confirms returned AI sample shape.
+  - Intended for "check hardware before sweep" workflows.
 - `stop_sync_io()`
   - Stops and releases synchronized AO+AI tasks.
 - `stop_input()`
   - Stops input and releases the AI task.
 - `stop_output()`
   - Stops output and releases the AO task.
+
+## Docstring Convention
+
+USB6451 method docstrings follow a consistent structure for lab readability:
+- `Purpose`
+- `Inputs`
+- `Output`
+- `Raises` (when relevant)
+- `Notes` (when relevant)
+
+All units are explicit (`Hz`, `V`, `S/s`) to reduce ambiguity in measurement setups.
 
 ## Waveform helpers
 

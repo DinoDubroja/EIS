@@ -126,6 +126,31 @@ class ContinuousSyncPeriodicConfig:
     output_frequency: float
 
 
+@dataclass(frozen=True)
+class SyncConnectionValidationResult:
+    """Result summary from a short synchronized AO+AI connection validation run.
+
+    Inputs:
+        device: Device name from NI MAX, for example ``"Dev1"``.
+        ao_channel: AO channel used during validation.
+        ai_channels: Tuple of AI channels used during validation.
+        sample_rate: Shared AO/AI sample clock in samples/second (S/s).
+        samples_per_channel: Number of samples captured per AI channel.
+        measured_shape: Returned AI array shape as ``(channels, samples)``.
+        message: Human-readable status message suitable for logs/UI.
+    Output:
+        Immutable validation report.
+    """
+
+    device: str
+    ao_channel: str
+    ai_channels: tuple[str, ...]
+    sample_rate: float
+    samples_per_channel: int
+    measured_shape: tuple[int, int]
+    message: str
+
+
 class USB6451:
     """High-level wrapper for NI USB-6451 analog I/O operations."""
 
@@ -142,21 +167,28 @@ class USB6451:
     def __init__(self) -> None:
         """Create a new controller.
 
-        Input:
+        Purpose:
+            Initialize USB-6451 task handles and internal state used by this API.
+
+        Inputs:
             None.
         Output:
             New object with no active DAQ task.
         """
 
+        # Long-lived task handles for continuous operation APIs.
         self._ao_task: Optional[nidaqmx.Task] = None
         self._ai_task: Optional[nidaqmx.Task] = None
         self._sync_ao_task: Optional[nidaqmx.Task] = None
         self._sync_ai_task: Optional[nidaqmx.Task] = None
+        # Channel counts are tracked so readback shape stays deterministic.
         self._ai_channel_count = 0
         self._sync_ai_channel_count = 0
+        # Cached configs simplify diagnostics after a run.
         self._last_config: Optional[ContinuousSineConfig | ContinuousPeriodicConfig] = None
         self._last_input_config: Optional[ContinuousInputConfig] = None
         self._last_sync_config: Optional[ContinuousSyncPeriodicConfig] = None
+        # Phase tracking for non-regenerative sine streaming.
         self._non_regen_sine_active = False
         self._non_regen_phase = 0.0
         self._non_regen_frequency = 0.0
@@ -181,6 +213,9 @@ class USB6451:
         allow_regen: bool = True,
     ) -> float:
         """Start continuous sine generation on one analog output channel.
+
+        Purpose:
+            Generate a steady sine signal on AO for stimulus or quick lab checks.
 
         Inputs:
             device: Device name (for example ``"Dev1"``).
@@ -271,6 +306,9 @@ class USB6451:
     ) -> ContinuousSineConfig:
         """Validate requested sine settings and return exact realizable config.
 
+        Purpose:
+            Preview the exact realizable sine settings before starting output.
+
         Inputs:
             device: Device name (for example ``"Dev1"``).
             ao_channel: AO channel name (for example ``"ao0"``).
@@ -317,8 +355,9 @@ class USB6451:
     ) -> float:
         """Start continuous non-regenerative sine output.
 
-        This mode is for frequencies where ``sample_rate / frequency`` is not an integer.
-        You must keep feeding new chunks using ``write_sine_chunk_non_regen(...)``.
+        Purpose:
+            Generate an exact requested sine frequency when ``sample_rate / frequency``
+            is not an integer by using chunked non-regenerative streaming.
 
         Inputs:
             device: Device name (for example ``"Dev1"``).
@@ -335,6 +374,9 @@ class USB6451:
         Raises:
             ValueError: Invalid inputs.
             nidaqmx.DaqError: DAQ configuration/start/write failure.
+
+        Notes:
+            Keep feeding data with ``write_sine_chunk_non_regen(...)`` while running.
         """
 
         if chunk_samples < 1:
@@ -400,6 +442,9 @@ class USB6451:
     ) -> int:
         """Write one more sine chunk for active non-regenerative output.
 
+        Purpose:
+            Continue non-regenerative sine output with phase continuity.
+
         Inputs:
             chunk_samples: Number of new samples to generate and write. Must be >= 1.
         Output:
@@ -433,7 +478,10 @@ class USB6451:
     def stop_output(self) -> None:
         """Stop and release the active analog output task.
 
-        Input:
+        Purpose:
+            Safely stop AO task and clear non-regenerative streaming state.
+
+        Inputs:
             None.
         Output:
             None. Safe to call when no task is running.
@@ -466,8 +514,8 @@ class USB6451:
     ) -> float:
         """Start continuous analog input acquisition using the internal clock.
 
-        This follows NI's continuous AI example pattern:
-        `analog_in/cont_voltage_acq_int_clk.py` (start, then read chunks in loop).
+        Purpose:
+            Start continuous AI capture for live monitoring or long recordings.
 
         Inputs:
             device: Device name (for example ``"Dev1"``).
@@ -486,6 +534,9 @@ class USB6451:
         Raises:
             ValueError: Invalid inputs.
             nidaqmx.DaqError: DAQ configuration/start failed.
+
+        Notes:
+            Read blocks using ``read_input_chunk(...)`` after this call.
         """
 
         channels = self._normalize_ai_channels(ai_channels)
@@ -559,8 +610,8 @@ class USB6451:
     ) -> np.ndarray:
         """Measure one finite AI block and return raw samples.
 
-        NI pattern reference:
-        `analog_in/voltage_acq_int_clk.py` (finite internal-clock acquisition).
+        Purpose:
+            Acquire one fixed-size block from AI channels with shared settings.
 
         Inputs:
             samples_per_channel: Number of samples to acquire per channel. Must be >= 1.
@@ -645,6 +696,9 @@ class USB6451:
     ) -> np.ndarray:
         """Read one chunk from the running continuous AI task.
 
+        Purpose:
+            Fetch the next AI block from an active continuous input task.
+
         Inputs:
             samples_per_channel: Number of samples to read per channel. Must be >= 1.
             timeout: Read timeout in seconds.
@@ -670,7 +724,10 @@ class USB6451:
     def stop_input(self) -> None:
         """Stop and release the active analog input task.
 
-        Input:
+        Purpose:
+            Safely stop and release continuous AI task resources.
+
+        Inputs:
             None.
         Output:
             None. Safe to call when no input task is running.
@@ -706,9 +763,9 @@ class USB6451:
     ) -> ContinuousSyncPeriodicConfig:
         """Start synchronized continuous periodic AO output and AI acquisition.
 
-        This follows NI synchronization patterns shown in:
-        - `examples/synchronization/multi_function/ai_ao_sync.py`
-        - `examples/playrec.py`
+        Purpose:
+            Run synchronized periodic AO stimulation and continuous AI capture
+            using one shared sample clock.
 
         Inputs:
             period_samples: One AO waveform period in volts (V), repeated continuously.
@@ -730,6 +787,9 @@ class USB6451:
         Raises:
             ValueError: Invalid inputs or limits.
             nidaqmx.DaqError: DAQ configuration/start failure.
+
+        Notes:
+            NI trigger pattern is used: AO waits for AI start trigger.
         """
 
         channels = self._normalize_ai_channels(ai_channels)
@@ -854,9 +914,8 @@ class USB6451:
     ) -> np.ndarray:
         """Run one finite synchronized AO+AI measurement and return raw AI data.
 
-        NI pattern references:
-        - `examples/synchronization/multi_function/ai_ao_sync.py`
-        - `examples/playrec.py`
+        Purpose:
+            Output one finite AO waveform and capture synchronized AI samples.
 
         Inputs:
             output_samples: Finite AO waveform to output once, in volts (V).
@@ -879,6 +938,9 @@ class USB6451:
         Raises:
             ValueError: Invalid inputs.
             nidaqmx.DaqError: DAQ configuration/start/read failed.
+
+        Notes:
+            NI trigger pattern is used: AO waits for AI start trigger.
         """
 
         channels = self._normalize_ai_channels(ai_channels)
@@ -1008,6 +1070,9 @@ class USB6451:
         timeout: float = 10.0,
     ) -> np.ndarray:
         """Output a sine on AO and measure a finite number of sine periods on AI.
+
+        Purpose:
+            Convenience method for sine-based synchronized measurements.
 
         Inputs:
             periods: Number of sine periods to output/measure. Must be >= 1.
@@ -1143,6 +1208,102 @@ class USB6451:
             timeout=timeout,
         )
 
+    def validate_sync_connection(
+        self,
+        *,
+        device: str = "Dev1",
+        ao_channel: str = "ao0",
+        ai_channels: str | Sequence[str] = ("ai0", "ai7"),
+        sample_rate: float = 20_000.0,
+        samples_per_channel: int = 256,
+        ao_test_voltage: float = 0.0,
+        ao_min_voltage: float = -10.0,
+        ao_max_voltage: float = 10.0,
+        ai_min_voltage: float = -10.0,
+        ai_max_voltage: float = 10.0,
+        input_mode: str = "differential",
+        ai_terminal_config=None,
+        timeout: float = 10.0,
+    ) -> SyncConnectionValidationResult:
+        """Run a short synchronized AO+AI self-check before a measurement sweep.
+
+        Purpose:
+            Verify that synchronized AO+AI operation is functioning before
+            starting a frequency sweep.
+
+        Inputs:
+            device: Device name (for example ``"Dev1"``).
+            ao_channel: AO channel used for the preflight test.
+            ai_channels: One AI channel name or a sequence of AI channels.
+            sample_rate: Shared AO/AI sample clock in samples/second (S/s).
+            samples_per_channel: Samples acquired per AI channel. Must be >= 1.
+            ao_test_voltage: Constant AO level in volts (V) used for the test.
+            ao_min_voltage: AO lower limit in volts (V).
+            ao_max_voltage: AO upper limit in volts (V).
+            ai_min_voltage: AI lower limit in volts (V).
+            ai_max_voltage: AI upper limit in volts (V).
+            input_mode: Simple AI wiring mode string.
+            ai_terminal_config: Optional native NI terminal config override.
+            timeout: Read timeout in seconds.
+        Output:
+            ``SyncConnectionValidationResult`` with measured shape and summary.
+        Raises:
+            ValueError: Invalid input values.
+            RuntimeError: Returned sample shape does not match requested shape.
+            nidaqmx.DaqError: DAQ configuration/start/read failure.
+
+        Notes:
+            This method checks DAQ communication and synchronized timing path.
+        """
+
+        if samples_per_channel < 1:
+            raise ValueError("samples_per_channel must be >= 1.")
+        if ao_min_voltage >= ao_max_voltage:
+            raise ValueError("ao_min_voltage must be smaller than ao_max_voltage.")
+        if ao_test_voltage < ao_min_voltage or ao_test_voltage > ao_max_voltage:
+            raise ValueError(
+                "ao_test_voltage must be inside AO limits: "
+                f"[{ao_min_voltage:.3f}, {ao_max_voltage:.3f}] V."
+            )
+
+        channels = self._normalize_ai_channels(ai_channels)
+        test_output = np.full(samples_per_channel, ao_test_voltage, dtype=np.float64)
+        ai_data = self.measure_sync_finite(
+            output_samples=test_output,
+            sample_rate=sample_rate,
+            device=device,
+            ao_channel=ao_channel,
+            ai_channels=channels,
+            ao_min_voltage=ao_min_voltage,
+            ao_max_voltage=ao_max_voltage,
+            ai_min_voltage=ai_min_voltage,
+            ai_max_voltage=ai_max_voltage,
+            input_mode=input_mode,
+            ai_terminal_config=ai_terminal_config,
+            timeout=timeout,
+        )
+
+        expected_shape = (len(channels), samples_per_channel)
+        measured_shape = (int(ai_data.shape[0]), int(ai_data.shape[1]))
+        if measured_shape != expected_shape:
+            raise RuntimeError(
+                "Synchronized connection check returned unexpected data shape: "
+                f"expected {expected_shape}, got {measured_shape}."
+            )
+
+        return SyncConnectionValidationResult(
+            device=device.strip(),
+            ao_channel=ao_channel.strip(),
+            ai_channels=channels,
+            sample_rate=float(sample_rate),
+            samples_per_channel=samples_per_channel,
+            measured_shape=measured_shape,
+            message=(
+                "Synchronized AO+AI connection check passed "
+                f"for {device.strip()} with {len(channels)} AI channel(s)."
+            ),
+        )
+
     def read_sync_input_chunk(
         self,
         *,
@@ -1150,6 +1311,9 @@ class USB6451:
         timeout: float = 10.0,
     ) -> np.ndarray:
         """Read one chunk from the synchronized AI task.
+
+        Purpose:
+            Fetch one AI block while synchronized continuous IO is running.
 
         Inputs:
             samples_per_channel: Number of samples per channel. Must be >= 1.
@@ -1179,7 +1343,10 @@ class USB6451:
     def stop_sync_io(self) -> None:
         """Stop and release active synchronized AO+AI tasks.
 
-        Input:
+        Purpose:
+            Stop and release both synchronized tasks in a safe order.
+
+        Inputs:
             None.
         Output:
             None. Safe to call when sync tasks are not running.
@@ -1210,7 +1377,10 @@ class USB6451:
     def is_sync_running(self) -> bool:
         """Return synchronized AO+AI running state.
 
-        Input:
+        Purpose:
+            Report whether synchronized AO and AI tasks are both active.
+
+        Inputs:
             None.
         Output:
             ``True`` when both sync tasks are active, otherwise ``False``.
@@ -1221,7 +1391,10 @@ class USB6451:
     def is_input_running(self) -> bool:
         """Return input running state.
 
-        Input:
+        Purpose:
+            Report whether continuous AI task is currently active.
+
+        Inputs:
             None.
         Output:
             ``True`` when this object has an active AI task, otherwise ``False``.
@@ -1232,7 +1405,10 @@ class USB6451:
     def is_output_running(self) -> bool:
         """Return output running state.
 
-        Input:
+        Purpose:
+            Report whether continuous AO task is currently active.
+
+        Inputs:
             None.
         Output:
             ``True`` when this object has an active AO task, otherwise ``False``.
@@ -1243,7 +1419,10 @@ class USB6451:
     def close(self) -> None:
         """Release all DAQ resources held by this object.
 
-        Input:
+        Purpose:
+            Final cleanup helper that stops output, input, and synchronized tasks.
+
+        Inputs:
             None.
         Output:
             None.
@@ -1264,6 +1443,9 @@ class USB6451:
         max_voltage: float = 10.0,
     ) -> float:
         """Start continuous periodic output from user-provided one-period samples.
+
+        Purpose:
+            Replay a custom one-period waveform continuously on AO.
 
         Inputs:
             period_samples: One full waveform period as voltage samples in volts (V).
@@ -1334,6 +1516,9 @@ class USB6451:
     ) -> ContinuousSineConfig:
         """Validate inputs and build internal config.
 
+        Purpose:
+            Internal helper for exact sine configuration checks.
+
         Inputs:
             Same as ``start_continuous_sine_output`` except ``allow_regen``.
         Output:
@@ -1398,6 +1583,9 @@ class USB6451:
         max_voltage: float,
     ) -> tuple[ContinuousPeriodicConfig, np.ndarray]:
         """Validate user periodic waveform samples and return config + normalized data.
+
+        Purpose:
+            Internal helper for validating custom periodic AO waveforms.
 
         Inputs:
             period_samples: One full waveform period as voltage samples in volts (V).
@@ -1471,7 +1659,25 @@ class USB6451:
         min_voltage: float,
         max_voltage: float,
     ) -> tuple[str, str]:
-        """Validate common sine parameters and return normalized device/channel names."""
+        """Validate common sine parameters and normalize device/channel names.
+
+        Purpose:
+            Internal guard for sine-based APIs before task configuration.
+
+        Inputs:
+            device: NI device name.
+            ao_channel: AO channel name.
+            frequency: Requested sine frequency in hertz (Hz).
+            amplitude: Sine amplitude in volts (V).
+            offset: Sine offset in volts (V).
+            sample_rate: AO sample rate in samples/second (S/s).
+            min_voltage: AO lower limit in volts (V).
+            max_voltage: AO upper limit in volts (V).
+        Output:
+            Tuple ``(device, ao_channel)`` with trimmed names.
+        Raises:
+            ValueError: Any invalid value or out-of-limit waveform request.
+        """
 
         normalized_device = device.strip()
         normalized_channel = ao_channel.strip()
@@ -1513,7 +1719,21 @@ class USB6451:
         sample_count: int,
         phase_in: float,
     ) -> tuple[np.ndarray, float]:
-        """Generate a phase-continuous sine chunk and return next phase."""
+        """Generate one phase-continuous sine chunk.
+
+        Purpose:
+            Internal chunk generator for non-regenerative streaming paths.
+
+        Inputs:
+            frequency: Sine frequency in hertz (Hz).
+            amplitude: Sine amplitude in volts (V).
+            offset: Sine offset in volts (V).
+            sample_rate: Sample rate in samples/second (S/s).
+            sample_count: Number of samples to generate.
+            phase_in: Start phase in radians.
+        Output:
+            Tuple ``(samples, phase_out)`` where ``phase_out`` is used for the next chunk.
+        """
 
         omega = 2.0 * np.pi * frequency / sample_rate
         phases = phase_in + omega * np.arange(sample_count, dtype=np.float64)
@@ -1523,7 +1743,18 @@ class USB6451:
 
     @staticmethod
     def _normalize_ai_channels(ai_channels: str | Sequence[str]) -> tuple[str, ...]:
-        """Normalize AI channel input to a non-empty tuple of channel strings."""
+        """Normalize AI channel input.
+
+        Purpose:
+            Convert user channel input into a clean non-empty tuple.
+
+        Inputs:
+            ai_channels: One channel string or sequence of channel strings.
+        Output:
+            Tuple of normalized channel names.
+        Raises:
+            ValueError: No valid channel names remain after normalization.
+        """
         if isinstance(ai_channels, str):
             channels = (ai_channels.strip(),)
         else:
@@ -1543,7 +1774,23 @@ class USB6451:
         max_voltage: float,
         terminal_config,
     ) -> None:
-        """Validate continuous AI limits using USB-6451 constraints."""
+        """Validate AI limits against USB-6451 constraints.
+
+        Purpose:
+            Internal safety guard for AI channel count, rate, and voltage limits.
+
+        Inputs:
+            device: NI device name.
+            ai_channels: Tuple of AI channels.
+            sample_rate: AI sample rate in samples/second (S/s).
+            min_voltage: AI lower limit in volts (V).
+            max_voltage: AI upper limit in volts (V).
+            terminal_config: NI terminal configuration (or ``None``).
+        Output:
+            None.
+        Raises:
+            ValueError: Any requested setting exceeds USB-6451 limits.
+        """
         if not device.strip():
             raise ValueError("device must not be empty.")
         if len(ai_channels) > self.MAX_AI_CHANNELS:
@@ -1571,7 +1818,17 @@ class USB6451:
 
     @staticmethod
     def _reshape_read_data(raw, channel_count: int) -> np.ndarray:
-        """Convert nidaqmx read output to a predictable channels x samples array."""
+        """Convert DAQmx read output to deterministic array shape.
+
+        Purpose:
+            Normalize NI read return types to ``(channels, samples)`` arrays.
+
+        Inputs:
+            raw: Raw value returned by DAQmx ``read``.
+            channel_count: Expected number of channels.
+        Output:
+            ``numpy.ndarray`` shaped as ``(channels, samples)``.
+        """
         arr = np.asarray(raw, dtype=np.float64)
         if arr.ndim == 0:
             return arr.reshape(1, 1)
@@ -1582,7 +1839,16 @@ class USB6451:
         return arr
 
     def _clear_non_regen_state(self) -> None:
-        """Reset internal non-regenerative sine tracking state."""
+        """Reset non-regenerative sine tracking state.
+
+        Purpose:
+            Return internal chunk/phase state to defaults after stop/cleanup.
+
+        Inputs:
+            None.
+        Output:
+            None.
+        """
 
         self._non_regen_sine_active = False
         self._non_regen_phase = 0.0
@@ -1596,6 +1862,9 @@ class USB6451:
     @staticmethod
     def _resolve_terminal_config(*, input_mode: str, terminal_config):
         """Map a simple input mode string to NI terminal configuration.
+
+        Purpose:
+            Translate user-friendly AI wiring mode names to NI constants.
 
         Inputs:
             input_mode: One of ``"default"``, ``"differential"``, ``"rse"``,
