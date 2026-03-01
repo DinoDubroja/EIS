@@ -26,5 +26,11 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
   - `eis/config/excel_loader.py`
   - `eis/config/validator.py`
   - config data models in `eis/models/config_models.py`
+- `eis/acquisition/` now includes:
+  - `usb6451_adapter.py`: thin adapter around USB6451 low-level API
+  - `preflight_check.py`: DAQ connectivity check wrapper
+  - `measurement_runner.py`: one-frequency acquisition execution
+  - `sweep_controller.py`: sweep loop with repeats + progress callback
+  - `eis/models/measurement_models.py`: acquisition result/progress models
 - Next chunk:
-  - acquisition orchestrator and DAQ preflight integration.
+  - processing pipeline (filtering, FFT, fitting, impedance extraction).

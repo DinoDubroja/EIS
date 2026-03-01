@@ -4,7 +4,7 @@
 ```python
 from eis import load_and_validate_config
 
-sweep = load_and_validate_config("config.xlsx")
+sweep = load_and_validate_config("config_examples/config_phase1_example.xlsx")
 print(len(sweep.points))
 print(sweep.points[0])
 ```
@@ -24,3 +24,40 @@ print(sweep.points[0])
 
 ## Notes for technicians and EE users
 Error messages include row and column references from Excel to speed up troubleshooting.
+
+## Execute acquisition sweep (Chunk 2)
+```python
+from eis import (
+    ExcitationConfig,
+    HardwareConfig,
+    USB6451Adapter,
+    execute_sweep,
+    load_and_validate_config,
+)
+
+sweep = load_and_validate_config("config_examples/config_phase1_example.xlsx")
+adapter = USB6451Adapter()
+hardware = HardwareConfig(
+    device="Dev1",
+    ao_channel="ao0",
+    ai_channels=("ai0", "ai7"),
+    input_mode="differential",
+)
+excitation = ExcitationConfig(amplitude_v=0.2, offset_v=0.0)
+
+def on_progress(p):
+    print(f"{p.completed_steps}/{p.total_steps} f={p.frequency_hz:.2f} Hz")
+
+result = execute_sweep(
+    sweep=sweep,
+    adapter=adapter,
+    hardware=hardware,
+    excitation=excitation,
+    repeats=1,
+    run_preflight=True,
+    progress_callback=on_progress,
+)
+adapter.close()
+```
+
+This returns raw captures in memory. Saving and plotting layers will be added in next chunks.
