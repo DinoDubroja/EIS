@@ -11,6 +11,9 @@ import re
 
 
 _SERIAL_ALLOWED_PATTERN = re.compile(r"[^A-Za-z0-9_-]+")
+_RUN_FOLDER_PATTERN = re.compile(
+    r"^(?P<serial>.+)_(?P<day>\d{1,2})_(?P<month>\d{1,2})_(?P<year>\d{4})_(?P<hour>\d{1,2})_(?P<minute>\d{1,2})$"
+)
 
 
 def sanitize_serial_number(serial_number: str) -> str:
@@ -47,6 +50,35 @@ def build_run_folder_name(serial_number: str, started_at_local: datetime) -> str
         f"{started_at_local.day}_{started_at_local.month}_{started_at_local.year}_"
         f"{started_at_local.hour}_{started_at_local.minute}"
     )
+
+
+def parse_run_folder_name(folder_name: str) -> tuple[str, datetime]:
+    """Parse run folder name ``SERIAL_D_M_Y_H_M``.
+
+    Inputs:
+        folder_name: Run folder name to parse.
+    Output:
+        Tuple ``(serial_number, started_at_local)``.
+    Raises:
+        ValueError: Name does not match expected folder format.
+    """
+
+    match = _RUN_FOLDER_PATTERN.match(folder_name.strip())
+    if match is None:
+        raise ValueError(
+            "Run folder name must follow SERIAL_D_M_Y_H_M format, "
+            f"got: {folder_name!r}"
+        )
+
+    serial = match.group("serial")
+    started_at = datetime(
+        year=int(match.group("year")),
+        month=int(match.group("month")),
+        day=int(match.group("day")),
+        hour=int(match.group("hour")),
+        minute=int(match.group("minute")),
+    )
+    return serial, started_at
 
 
 def format_frequency_token(frequency_hz: float) -> str:

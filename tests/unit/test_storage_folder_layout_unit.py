@@ -13,6 +13,7 @@ from eis.storage.naming import (
     build_repeat_file_stem,
     build_run_folder_name,
     format_frequency_token,
+    parse_run_folder_name,
     sanitize_serial_number,
 )
 
@@ -32,6 +33,11 @@ class TestStorageFolderLayoutUnit(unittest.TestCase):
         dt = datetime(2026, 3, 1, 14, 45)
         name = build_run_folder_name("Z100N34", dt)
         self.assertEqual(name, "Z100N34_1_3_2026_14_45")
+        serial, parsed_dt = parse_run_folder_name(name)
+        self.assertEqual(serial, "Z100N34")
+        self.assertEqual(parsed_dt, dt)
+        with self.assertRaises(ValueError):
+            parse_run_folder_name("bad_folder_name")
 
     # Checks per-point/per-repeat naming used for repeat artifact persistence.
     def test_point_and_repeat_naming_helpers(self) -> None:

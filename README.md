@@ -13,6 +13,7 @@ Repository for EIS measurement scripts and libraries
   - Current conversion: `eis/acquisition/transconductance.py` (Clarke-Hess 8100)
   - Acquisition models: `eis/models/measurement_models.py`
   - Processing pipeline: `eis/processing/impedance_processor.py`
+  - Plot selection + overlays: `eis/plotting/run_selection.py`, `eis/plotting/impedance_plots.py`
   - Storage + metadata report:
     - `eis/storage/folder_layout.py`
     - `eis/storage/run_artifacts.py`
@@ -46,6 +47,7 @@ python -m unittest discover -s tests/unit -p "test_*.py"
 python demo_tests/phase1_config_validation_demo.py
 python demo_tests/phase1_acquisition_sweep_demo.py
 python demo_tests/phase1_metadata_report_demo.py
+python demo_tests/phase1_plotting_selection_demo.py
 ```
 
 Metadata report default:

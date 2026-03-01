@@ -26,6 +26,13 @@ from eis.models.measurement_models import (
     HardwareConfig,
     ImpedancePointResult,
 )
+from eis.plotting import (
+    RunFolderRecord,
+    RunSelection,
+    plot_impedance_bode,
+    plot_impedance_nyquist,
+    select_run_folders,
+)
 from eis.processing import (
     ImpedanceProcessingConfig,
     compute_impedance_for_capture,
@@ -56,6 +63,8 @@ __all__ = [
     "CaptureConditioningConfig",
     "ImpedanceProcessingConfig",
     "USB6451Adapter",
+    "RunFolderRecord",
+    "RunSelection",
     "build_artifact_link_payload",
     "build_metadata_bank",
     "create_run_folder_layout",
@@ -67,9 +76,12 @@ __all__ = [
     "load_impedance_rows_from_base",
     "load_impedance_rows_from_run",
     "persist_run_artifacts",
+    "plot_impedance_bode",
+    "plot_impedance_nyquist",
     "regenerate_reports_from_bank",
     "run_measurement_point",
     "run_preflight_check",
+    "select_run_folders",
     "write_impedance_table_csv",
     "write_impedance_summary_mean_std_csv",
     "write_raw_capture_csv",

@@ -240,3 +240,40 @@ Notes:
 - Current channel is interpreted as shunt voltage (`I = V_shunt / R_shunt_nominal`).
 - DUT channel is interpreted as DUT voltage (`Z = V_dut / I`).
 - Uncertainty propagation (Type A/Type B) is intentionally deferred to later chunk.
+
+## Chunk 7: Multi-Run Plot Selection (last / last_n / all)
+Run selection is inferred from folder names (`SERIAL_D_M_Y_H_M`) so notebooks can
+quickly compare recent runs.
+
+```python
+from datetime import datetime
+from eis import RunSelection, plot_impedance_bode, plot_impedance_nyquist
+
+# Only newest run
+plot_impedance_nyquist(
+    base_output_dir="measurements",
+    selection=RunSelection(mode="last"),
+)
+
+# Newest 5 runs for one serial prefix
+plot_impedance_nyquist(
+    base_output_dir="measurements",
+    selection=RunSelection(mode="last_n", last_n=5, serial_contains="Z100N34"),
+)
+
+# All runs in a time window for selected serials
+plot_impedance_bode(
+    base_output_dir="measurements",
+    selection=RunSelection(
+        mode="all",
+        serial_numbers=("Z100N34", "Z200N10"),
+        started_at_or_after=datetime(2026, 3, 1, 8, 0),
+        started_at_or_before=datetime(2026, 3, 1, 16, 0),
+    ),
+)
+```
+
+Demo script:
+```python
+python demo_tests/phase1_plotting_selection_demo.py
+```

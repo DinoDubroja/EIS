@@ -52,5 +52,11 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
     - extraction method selection (`fft` or `sine_fit`)
     - sine-fit backend selection (`numpy_lstsq` or `scipy_least_squares`)
     - nominal shunt conversion (`R_shunt = 0.008 ohm`) and complex impedance output
+- `eis/plotting/` now includes:
+  - `run_selection.py`: run discovery + filters from folder names
+    - modes: `last`, `last_n`, `all`
+    - filters: serial exact/contains, start-time range
+  - `impedance_plots.py`: Nyquist/Bode overlays over selected runs
+    from persisted `IMPEDANCE/impedance.csv` artifacts
 - Next chunk:
-  - plotting API from both in-memory objects and persisted artifacts.
+  - raw-vs-fit plotting and higher-level uncertainty analysis/report layering.

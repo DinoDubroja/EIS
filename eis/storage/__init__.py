@@ -19,6 +19,7 @@ from eis.storage.metadata_writer import (
     write_metadata_report_pdf,
 )
 from eis.storage.naming import build_run_folder_name, sanitize_serial_number
+from eis.storage.naming import parse_run_folder_name
 from eis.storage.run_artifacts import (
     CaptureArtifactRecord,
     PersistedRunArtifacts,
@@ -41,6 +42,7 @@ __all__ = [
     "build_metadata_bank",
     "build_run_folder_name",
     "create_run_folder_layout",
+    "parse_run_folder_name",
     "load_impedance_rows_from_base",
     "load_impedance_rows_from_run",
     "persist_run_artifacts",
