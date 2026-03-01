@@ -94,10 +94,36 @@ class TestStorageMetadataWriterUnit(unittest.TestCase):
             serial_number="Z100N34",
             user_name="tester",
             description="unit test run",
+            capture_artifacts=[
+                {
+                    "row_number": 2,
+                    "repeat_index": 1,
+                    "frequency_hz": 12.54,
+                    "raw_csv_relpath": "RAW/row_0002_f12_54Hz/repeat_001_raw.csv",
+                    "impedance_csv_relpath": "IMPEDANCE/row_0002_f12_54Hz/repeat_001_impedance.csv",
+                }
+            ],
+            point_summaries=[
+                {
+                    "row_number": 2,
+                    "frequency_hz": 12.54,
+                    "repeat_count": 1,
+                    "summary_csv_relpath": "IMPEDANCE/row_0002_f12_54Hz/summary_mean_std.csv",
+                }
+            ],
         )
-        self.assertEqual(bank["schema_version"], "phase1_metadata_v1")
+        self.assertEqual(bank["schema_version"], "phase1_metadata_v2")
         self.assertEqual(bank["identity"]["serial_number"], "Z100N34")
         self.assertEqual(len(bank["captures"]), 1)
+        self.assertEqual(
+            bank["captures"][0]["raw_csv_relpath"],
+            "RAW/row_0002_f12_54Hz/repeat_001_raw.csv",
+        )
+        self.assertEqual(
+            bank["captures"][0]["impedance_csv_relpath"],
+            "IMPEDANCE/row_0002_f12_54Hz/repeat_001_impedance.csv",
+        )
+        self.assertEqual(bank["artifacts"]["point_summary_count"], 1)
 
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

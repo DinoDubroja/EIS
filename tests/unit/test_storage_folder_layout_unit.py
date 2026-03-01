@@ -8,7 +8,13 @@ import unittest
 from pathlib import Path
 
 from eis.storage.folder_layout import create_run_folder_layout
-from eis.storage.naming import build_run_folder_name, sanitize_serial_number
+from eis.storage.naming import (
+    build_point_folder_name,
+    build_repeat_file_stem,
+    build_run_folder_name,
+    format_frequency_token,
+    sanitize_serial_number,
+)
 
 
 class TestStorageFolderLayoutUnit(unittest.TestCase):
@@ -26,6 +32,16 @@ class TestStorageFolderLayoutUnit(unittest.TestCase):
         dt = datetime(2026, 3, 1, 14, 45)
         name = build_run_folder_name("Z100N34", dt)
         self.assertEqual(name, "Z100N34_1_3_2026_14_45")
+
+    # Checks per-point/per-repeat naming used for repeat artifact persistence.
+    def test_point_and_repeat_naming_helpers(self) -> None:
+        self.assertEqual(format_frequency_token(53.14), "53_14")
+        self.assertEqual(build_point_folder_name(7, 53.14), "row_0007_f53_14Hz")
+        self.assertEqual(build_repeat_file_stem(3), "repeat_003")
+        with self.assertRaises(ValueError):
+            build_point_folder_name(0, 10.0)
+        with self.assertRaises(ValueError):
+            build_repeat_file_stem(0)
 
     # Checks layout creates expected tree and blocks collisions.
     def test_create_run_folder_layout_collision_guard(self) -> None:

@@ -12,7 +12,10 @@ Repository for EIS measurement scripts and libraries
   - Runner/preflight: `eis/acquisition/measurement_runner.py`, `eis/acquisition/preflight_check.py`
   - Current conversion: `eis/acquisition/transconductance.py` (Clarke-Hess 8100)
   - Acquisition models: `eis/models/measurement_models.py`
-  - Storage + metadata report: `eis/storage/folder_layout.py`, `eis/storage/metadata_writer.py`
+  - Storage + metadata report:
+    - `eis/storage/folder_layout.py`
+    - `eis/storage/run_artifacts.py`
+    - `eis/storage/metadata_writer.py`
   - Architecture notes: `docs/architecture.md`
   - Usage notes: `docs/phase1_usage.md`
 - `USB6451`: NI USB-6451 high-level helper class
@@ -47,6 +50,8 @@ python demo_tests/phase1_metadata_report_demo.py
 Metadata report default:
 - HTML report in `REPORTS/metadata_report.html`
 - PDF generation is optional and can be regenerated from metadata bank
+- RAW/IMPEDANCE artifacts are stored per row/repeat and linked in metadata bank
+- Repeat summary files (`summary_mean_std.csv`) are generated per frequency point
 
 ## TODO
 

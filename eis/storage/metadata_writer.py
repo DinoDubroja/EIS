@@ -8,7 +8,8 @@ Design intent:
 - The data bank is the source of truth for report regeneration.
 - Report files are disposable views. If deleted, regenerate from the bank.
 - Metadata files include enough context (DAQ settings, config summary, capture
-  timing, current range, and computed drive values) to rebuild reports later.
+  timing, current range, computed drive values, and artifact file linkage) to
+  rebuild reports later.
 """
 
 from __future__ import annotations
@@ -35,11 +36,25 @@ def build_metadata_bank(
     serial_number: str,
     user_name: str,
     description: str | None = None,
+    capture_artifacts: list[dict[str, Any]] | tuple[dict[str, Any], ...] | None = None,
+    point_summaries: list[dict[str, Any]] | tuple[dict[str, Any], ...] | None = None,
 ) -> dict[str, Any]:
-    """Build structured metadata dictionary used as report data bank."""
+    """Build structured metadata dictionary used as report data bank.
+
+    Optional linkage inputs:
+        capture_artifacts: Per-capture RAW/IMPEDANCE file links.
+        point_summaries: Per-frequency summary file links.
+    """
+
+    artifact_by_key: dict[tuple[int, int], dict[str, Any]] = {}
+    if capture_artifacts is not None:
+        for item in capture_artifacts:
+            key = (int(item["row_number"]), int(item["repeat_index"]))
+            artifact_by_key[key] = item
 
     captures = []
     for capture in run_result.captures:
+        link = artifact_by_key.get((capture.row_number, capture.repeat_index))
         captures.append(
             {
                 "row_number": capture.row_number,
@@ -57,11 +72,19 @@ def build_metadata_bank(
                 "ai_channels": list(capture.ai_channels),
                 "ai_range_v": capture.ai_range_v,
                 "raw_shape": [int(capture.raw_data.shape[0]), int(capture.raw_data.shape[1])],
+                "raw_csv_relpath": (
+                    str(link["raw_csv_relpath"]) if link is not None else None
+                ),
+                "impedance_csv_relpath": (
+                    str(link["impedance_csv_relpath"])
+                    if link is not None and link.get("impedance_csv_relpath") is not None
+                    else None
+                ),
             }
         )
 
     payload: dict[str, Any] = {
-        "schema_version": "phase1_metadata_v1",
+        "schema_version": "phase1_metadata_v2",
         "generated_at_utc_iso": datetime.now(timezone.utc).isoformat(),
         "identity": {
             "serial_number": serial_number,
@@ -105,6 +128,12 @@ def build_metadata_bank(
             else None
         ),
         "captures": captures,
+        "artifacts": {
+            "capture_artifact_count": len(capture_artifacts or []),
+            "point_summary_count": len(point_summaries or []),
+            "capture_artifacts": list(capture_artifacts or []),
+            "point_summaries": list(point_summaries or []),
+        },
     }
     return payload
 
@@ -140,6 +169,8 @@ def write_metadata_bank_csv(metadata_bank: dict[str, Any], output_path: str | Pa
         "ai_channels",
         "ai_range_v",
         "raw_shape",
+        "raw_csv_relpath",
+        "impedance_csv_relpath",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -149,6 +180,8 @@ def write_metadata_bank_csv(metadata_bank: dict[str, Any], output_path: str | Pa
             serializable = dict(row)
             serializable["ai_channels"] = ",".join(row["ai_channels"])
             serializable["raw_shape"] = "x".join(str(v) for v in row["raw_shape"])
+            serializable["raw_csv_relpath"] = row["raw_csv_relpath"] or ""
+            serializable["impedance_csv_relpath"] = row["impedance_csv_relpath"] or ""
             writer.writerow(serializable)
     return path
 
@@ -177,6 +210,8 @@ def write_metadata_report_html(metadata_bank: dict[str, Any], output_path: str |
             f"<td>{item['ao_amplitude_v_peak']:.6g}</td>"
             f"<td>{item['started_at_utc_iso']}</td>"
             f"<td>{item['duration_s']:.4f}</td>"
+            f"<td>{item['raw_csv_relpath'] or '-'}</td>"
+            f"<td>{item['impedance_csv_relpath'] or '-'}</td>"
             "</tr>"
         )
         for idx, item in enumerate(captures)
@@ -327,6 +362,8 @@ def write_metadata_report_html(metadata_bank: dict[str, Any], output_path: str |
             <th>AO Amplitude (Vpeak)</th>
             <th>Start UTC</th>
             <th>Duration (s)</th>
+            <th>RAW CSV</th>
+            <th>IMPEDANCE CSV</th>
           </tr>
         </thead>
         <tbody>

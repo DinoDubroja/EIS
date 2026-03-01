@@ -138,6 +138,36 @@ class MeasurementCapture:
 
 
 @dataclass(frozen=True)
+class ImpedancePointResult:
+    """One impedance result for one frequency point and one repeat.
+
+    Inputs:
+        row_number: Config row index (1-based) used for traceability.
+        repeat_index: Repeat number (1-based) within the same frequency point.
+        frequency_hz: Frequency in hertz (Hz) for this result.
+        z_real_ohm: Real impedance component in ohms (Ohm).
+        z_imag_ohm: Imaginary impedance component in ohms (Ohm).
+        z_magnitude_ohm: Impedance magnitude in ohms (Ohm).
+        z_phase_deg: Impedance phase in degrees (deg).
+        extraction_method: Method label used to compute impedance.
+            Examples: ``"fft"``, ``"sine_fit"``, ``"demo_placeholder"``.
+        notes: Optional free text with additional context.
+    Output:
+        Immutable impedance result record for storage and statistics.
+    """
+
+    row_number: int
+    repeat_index: int
+    frequency_hz: float
+    z_real_ohm: float
+    z_imag_ohm: float
+    z_magnitude_ohm: float
+    z_phase_deg: float
+    extraction_method: str
+    notes: str | None = None
+
+
+@dataclass(frozen=True)
 class SweepProgress:
     """Progress update payload for UI progress bars and logs."""
 

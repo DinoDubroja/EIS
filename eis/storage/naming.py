@@ -47,3 +47,48 @@ def build_run_folder_name(serial_number: str, started_at_local: datetime) -> str
         f"{started_at_local.day}_{started_at_local.month}_{started_at_local.year}_"
         f"{started_at_local.hour}_{started_at_local.minute}"
     )
+
+
+def format_frequency_token(frequency_hz: float) -> str:
+    """Format frequency into a file-safe token used in folder names.
+
+    Inputs:
+        frequency_hz: Frequency in hertz (Hz).
+    Output:
+        Token where decimal separator is ``_``.
+    Example:
+        ``53.14 -> "53_14"``
+    """
+
+    base = f"{float(frequency_hz):.6f}".rstrip("0").rstrip(".")
+    return base.replace("-", "m").replace(".", "_")
+
+
+def build_point_folder_name(row_number: int, frequency_hz: float) -> str:
+    """Build point folder name ``row_NNNN_fTOKENHz``.
+
+    Inputs:
+        row_number: Config row number (1-based).
+        frequency_hz: Frequency in hertz (Hz).
+    Output:
+        Folder name for one sweep point.
+    """
+
+    if row_number < 1:
+        raise ValueError("row_number must be >= 1.")
+    token = format_frequency_token(frequency_hz)
+    return f"row_{row_number:04d}_f{token}Hz"
+
+
+def build_repeat_file_stem(repeat_index: int) -> str:
+    """Build repeat token ``repeat_NNN`` used in file names.
+
+    Inputs:
+        repeat_index: Repeat number (1-based).
+    Output:
+        Repeat token for files.
+    """
+
+    if repeat_index < 1:
+        raise ValueError("repeat_index must be >= 1.")
+    return f"repeat_{repeat_index:03d}"
