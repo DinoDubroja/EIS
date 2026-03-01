@@ -1,4 +1,8 @@
-"""Folder creation and collision-safe run layout helpers."""
+"""Run folder layout and anti-overwrite creation helpers.
+
+This module creates the default measurement output tree and enforces the data
+safety rule: if a run folder name already exists, acquisition is blocked.
+"""
 
 from __future__ import annotations
 

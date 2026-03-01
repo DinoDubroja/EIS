@@ -1,4 +1,15 @@
-"""Metadata bank and metadata report writers for Phase 1."""
+"""Metadata persistence and report rendering for Phase 1 measurement runs.
+
+This module treats metadata as a two-layer system:
+1. A machine-readable data bank (`metadata_bank.txt` as JSON and CSV capture table).
+2. Human-friendly report views generated from that bank (HTML and optional PDF).
+
+Design intent:
+- The data bank is the source of truth for report regeneration.
+- Report files are disposable views. If deleted, regenerate from the bank.
+- Metadata files include enough context (DAQ settings, config summary, capture
+  timing, current range, and computed drive values) to rebuild reports later.
+"""
 
 from __future__ import annotations
 
@@ -458,12 +469,24 @@ def write_metadata_report_pdf(metadata_bank: dict[str, Any], output_path: str | 
     return path
 
 
-def write_description_file(description: str | None, output_path: str | Path) -> Path:
-    """Write optional user description text file."""
+def write_description_file(description: str | None, output_path: str | Path) -> Path | None:
+    """Write optional user description text file.
+
+    Inputs:
+        description: Optional text entered by user.
+        output_path: Target file path.
+    Output:
+        Path of created file, or ``None`` when description is empty.
+    Notes:
+        If description is missing/blank, no file is created by design.
+    """
+
+    if description is None or description.strip() == "":
+        return None
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text((description or "").strip(), encoding="utf-8")
+    path.write_text(description.strip(), encoding="utf-8")
     return path
 
 

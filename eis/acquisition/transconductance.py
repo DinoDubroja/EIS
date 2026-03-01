@@ -1,4 +1,10 @@
-"""Clarke-Hess 8100 transconductance conversion and range selection."""
+"""Clarke-Hess 8100 transconductance conversion and range selection.
+
+This module stores range definitions from the Clarke-Hess 8100 datasheet and
+provides deterministic conversion from target output current (A RMS) to required
+AO drive amplitude (V peak). It also resolves current range selection policy,
+including manual fixed-range operation.
+"""
 
 from __future__ import annotations
 

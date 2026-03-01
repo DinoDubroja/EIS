@@ -1,4 +1,13 @@
-"""Data models for Phase 1 acquisition orchestration."""
+"""Typed data models for acquisition orchestration and metadata capture.
+
+These dataclasses define stable contracts between:
+- acquisition execution
+- storage/report generation
+- future processing/plotting layers
+
+Keeping these models explicit helps technicians and engineers inspect run
+records directly and supports robust test coverage for each pipeline stage.
+"""
 
 from __future__ import annotations
 

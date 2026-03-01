@@ -1,4 +1,9 @@
-"""USB-6451 adapter used by EIS Phase 1 acquisition orchestration."""
+"""USB-6451 adapter bridging EIS orchestration and low-level DAQ API.
+
+The adapter isolates direct calls to `USB6451` so higher-level sweep logic can
+be tested without NI drivers/hardware. It maps EIS-level inputs (point config,
+hardware config, preflight settings) to the low-level method signatures.
+"""
 
 from __future__ import annotations
 

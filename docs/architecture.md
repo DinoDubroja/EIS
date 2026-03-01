@@ -36,6 +36,9 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
 - `eis/storage/` now includes:
   - `naming.py`: naming helpers (`SERIAL_D_M_Y_H_M`)
   - `folder_layout.py`: collision-safe run folder creation
-  - `metadata_writer.py`: metadata bank + HTML/PDF report generation
+  - `metadata_writer.py`: metadata bank + report generation
+    - preferred default view: `REPORTS/metadata_report.html`
+    - optional PDF view generated from same bank
+    - `description.txt` generated only when user provided non-empty description
 - Next chunk:
   - processing pipeline (filtering, FFT, fitting, impedance extraction).

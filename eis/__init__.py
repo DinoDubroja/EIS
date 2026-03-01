@@ -1,4 +1,15 @@
-"""EIS Phase 1 backend package."""
+"""Top-level EIS backend API exports.
+
+This package-level module exposes the core entry points used by notebooks and
+automation scripts:
+- configuration load/validation
+- synchronized acquisition orchestration
+- drive conversion from current RMS to AO amplitude
+- storage and metadata/report generation helpers
+
+The intent is to provide a small, stable import surface for users while
+keeping implementation details in submodules.
+"""
 
 from eis.acquisition import (
     USB6451Adapter,

@@ -44,6 +44,10 @@ python demo_tests/phase1_acquisition_sweep_demo.py
 python demo_tests/phase1_metadata_report_demo.py
 ```
 
+Metadata report default:
+- HTML report in `REPORTS/metadata_report.html`
+- PDF generation is optional and can be regenerated from metadata bank
+
 ## TODO
 
 * synchronous AO + 2*AI notebook

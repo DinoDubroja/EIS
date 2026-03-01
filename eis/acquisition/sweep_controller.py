@@ -1,4 +1,11 @@
-"""Sweep orchestration with repeats and progress callbacks."""
+"""Sweep orchestration with repeat loops and progress callbacks.
+
+Responsibilities:
+- optional DAQ preflight check
+- deterministic frequency/repeat execution order
+- progress event emission for UI progress bars
+- returning a complete in-memory sweep result for downstream storage/analysis
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,10 @@
-"""Single-point acquisition runner for Phase 1 synchronized measurements."""
+"""Single-point synchronized acquisition runner.
+
+This module converts one validated sweep row into one DAQ capture operation.
+It resolves excitation mode (automatic current-based drive or fixed amplitude),
+applies AO limit guards, calls the USB6451 adapter, and returns a typed capture
+record with timing and metadata needed by later storage/reporting layers.
+"""
 
 from __future__ import annotations
 

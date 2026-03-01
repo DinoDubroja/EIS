@@ -1,4 +1,8 @@
-"""Naming helpers for measurement folders and files."""
+"""Naming helpers for measurement folders and file-safe identity fields.
+
+Functions in this module enforce the agreed run-folder naming format and
+serial-number sanitization to keep output paths robust across environments.
+"""
 
 from __future__ import annotations
 

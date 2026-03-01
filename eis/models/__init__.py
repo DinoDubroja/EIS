@@ -1,4 +1,10 @@
-﻿"""Data model exports for EIS package."""
+"""Data model exports used across EIS modules.
+
+The model layer centralizes typed structures for:
+- config validation output
+- acquisition run results and progress events
+- future processing and storage interfaces
+"""
 
 from eis.models.config_models import (
     ConfigValidationError,

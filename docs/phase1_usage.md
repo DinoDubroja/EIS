@@ -98,10 +98,10 @@ from datetime import datetime
 from eis import (
     build_metadata_bank,
     create_run_folder_layout,
-    write_metadata_bank_csv,
+    write_description_file,
     write_metadata_bank_txt,
+    write_metadata_bank_csv,
     write_metadata_report_html,
-    write_metadata_report_pdf,
 )
 
 layout = create_run_folder_layout(
@@ -120,11 +120,14 @@ metadata_bank = build_metadata_bank(
 )
 write_metadata_bank_txt(metadata_bank, layout.root / "metadata_bank.txt")
 write_metadata_bank_csv(metadata_bank, layout.root / "metadata_measurements.csv")
-write_metadata_report_html(metadata_bank, layout.root / "metadata_report.html")
-write_metadata_report_pdf(metadata_bank, layout.root / "metadata_report.pdf")
+write_metadata_report_html(metadata_bank, layout.reports / "metadata_report.html")
+
+# Optional description file (generated only if description has content)
+write_description_file(metadata_bank["identity"]["description"], layout.root / "description.txt")
 ```
 
 Notes:
 - `metadata_bank.txt` is machine-oriented data bank (JSON), not a human report.
-- HTML and PDF are generated views from that bank.
+- HTML report is the preferred default view, stored under `REPORTS/`.
+- PDF can still be generated on demand from the same metadata bank.
 - If report files are lost, regenerate from `metadata_bank.txt`.

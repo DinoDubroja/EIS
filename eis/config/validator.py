@@ -1,4 +1,9 @@
-"""Validation logic for EIS Excel measurement configuration."""
+"""Validation logic for EIS Excel measurement configuration.
+
+This module converts raw worksheet rows into strict, typed sweep settings and
+collects user-facing validation issues with row/column context. The goal is to
+fail early with actionable feedback before any DAQ task starts.
+"""
 
 from __future__ import annotations
 

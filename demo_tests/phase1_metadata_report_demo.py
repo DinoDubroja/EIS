@@ -76,9 +76,11 @@ def main() -> None:
         run_preflight=True,
     )
 
+    demo_serial_number = f"DEMO_META_{datetime.now().strftime('%H%M%S')}"
+
     layout = create_run_folder_layout(
         base_output_dir=REPO_ROOT / "measurements",
-        serial_number="DEMO_META_001",
+        serial_number=demo_serial_number,
         started_at_local=datetime.now(),
     )
 
@@ -87,23 +89,33 @@ def main() -> None:
         run_result=run_result,
         hardware=hardware,
         excitation=excitation,
-        serial_number="DEMO_META_001",
+        serial_number=demo_serial_number,
         user_name="demo_user",
         description="Chunk 4 metadata report demo",
     )
 
     txt_path = write_metadata_bank_txt(metadata_bank, layout.root / "metadata_bank.txt")
     csv_path = write_metadata_bank_csv(metadata_bank, layout.root / "metadata_measurements.csv")
-    html_path = write_metadata_report_html(metadata_bank, layout.root / "metadata_report.html")
-    pdf_path = write_metadata_report_pdf(metadata_bank, layout.root / "metadata_report.pdf")
-    write_description_file(metadata_bank["identity"]["description"], layout.root / "description.txt")
+    html_path = write_metadata_report_html(metadata_bank, layout.reports / "metadata_report.html")
+
+    # HTML is preferred default. Keep PDF generation optional for comparison phase.
+    generate_pdf = False
+    pdf_path = None
+    if generate_pdf:
+        pdf_path = write_metadata_report_pdf(metadata_bank, layout.reports / "metadata_report.pdf")
+
+    description_path = write_description_file(
+        metadata_bank["identity"]["description"],
+        layout.root / "description.txt",
+    )
 
     print("Metadata demo completed")
     print(f"Run folder: {layout.root}")
     print(f"Metadata bank txt: {txt_path}")
     print(f"Metadata measurements csv: {csv_path}")
     print(f"Metadata report html: {html_path}")
-    print(f"Metadata report pdf: {pdf_path}")
+    print(f"Metadata report pdf: {pdf_path if pdf_path is not None else 'skipped'}")
+    print(f"Description file: {description_path if description_path is not None else 'not generated'}")
 
 
 if __name__ == "__main__":

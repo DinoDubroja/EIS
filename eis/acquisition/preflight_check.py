@@ -1,4 +1,9 @@
-"""DAQ preflight check helpers for Phase 1 sweep execution."""
+"""Preflight connectivity checks before running measurement sweeps.
+
+This module wraps the synchronized AO+AI validation call so sweep orchestration
+can perform a standard hardware readiness check before data acquisition starts.
+The preflight result is preserved in run metadata for traceability.
+"""
 
 from __future__ import annotations
 

@@ -106,12 +106,15 @@ class TestStorageMetadataWriterUnit(unittest.TestCase):
             html_path = write_metadata_report_html(bank, base / "metadata_report.html")
             pdf_path = write_metadata_report_pdf(bank, base / "metadata_report.pdf")
             desc_path = write_description_file("unit description", base / "description.txt")
+            desc_none = write_description_file(None, base / "description_missing.txt")
 
             self.assertTrue(txt_path.exists())
             self.assertTrue(csv_path.exists())
             self.assertTrue(html_path.exists())
             self.assertTrue(pdf_path.exists())
             self.assertTrue(desc_path.exists())
+            self.assertIsNone(desc_none)
+            self.assertFalse((base / "description_missing.txt").exists())
             self.assertTrue(pdf_path.stat().st_size > 0)
 
             loaded = json.loads(txt_path.read_text(encoding="utf-8"))
