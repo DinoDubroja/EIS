@@ -1,0 +1,17 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+
+# Notebook artifacts
+.ipynb_checkpoints/
+
+# Temporary Office files
+~$*.xlsx
+~$*.xlsm
+
+# Local measurement outputs (keep data local, not versioned)
+measurements/
+results/
+
