@@ -89,3 +89,42 @@ excitation = ExcitationConfig(
     amplitude_v=0.25,  # Vpeak
 )
 ```
+
+## Metadata Bank + Reports (Chunk 4)
+Use metadata bank (`.txt` JSON + `.csv`) as the source of truth for report regeneration.
+
+```python
+from datetime import datetime
+from eis import (
+    build_metadata_bank,
+    create_run_folder_layout,
+    write_metadata_bank_csv,
+    write_metadata_bank_txt,
+    write_metadata_report_html,
+    write_metadata_report_pdf,
+)
+
+layout = create_run_folder_layout(
+    base_output_dir="measurements",
+    serial_number="Z100N34",
+    started_at_local=datetime.now(),
+)
+metadata_bank = build_metadata_bank(
+    sweep=sweep,
+    run_result=result,
+    hardware=hardware,
+    excitation=excitation,
+    serial_number="Z100N34",
+    user_name="operator",
+    description="fixture A, room 3",
+)
+write_metadata_bank_txt(metadata_bank, layout.root / "metadata_bank.txt")
+write_metadata_bank_csv(metadata_bank, layout.root / "metadata_measurements.csv")
+write_metadata_report_html(metadata_bank, layout.root / "metadata_report.html")
+write_metadata_report_pdf(metadata_bank, layout.root / "metadata_report.pdf")
+```
+
+Notes:
+- `metadata_bank.txt` is machine-oriented data bank (JSON), not a human report.
+- HTML and PDF are generated views from that bank.
+- If report files are lost, regenerate from `metadata_bank.txt`.

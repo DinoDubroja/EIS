@@ -12,6 +12,7 @@ Repository for EIS measurement scripts and libraries
   - Runner/preflight: `eis/acquisition/measurement_runner.py`, `eis/acquisition/preflight_check.py`
   - Current conversion: `eis/acquisition/transconductance.py` (Clarke-Hess 8100)
   - Acquisition models: `eis/models/measurement_models.py`
+  - Storage + metadata report: `eis/storage/folder_layout.py`, `eis/storage/metadata_writer.py`
   - Architecture notes: `docs/architecture.md`
   - Usage notes: `docs/phase1_usage.md`
 - `USB6451`: NI USB-6451 high-level helper class
@@ -40,6 +41,7 @@ python -m unittest discover -s tests/unit -p "test_*.py"
 ```powershell
 python demo_tests/phase1_config_validation_demo.py
 python demo_tests/phase1_acquisition_sweep_demo.py
+python demo_tests/phase1_metadata_report_demo.py
 ```
 
 ## TODO

@@ -32,6 +32,10 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
   - `measurement_runner.py`: one-frequency acquisition execution
   - `sweep_controller.py`: sweep loop with repeats + progress callback
   - `transconductance.py`: Clarke-Hess 8100 range selection + `I_rms -> AO amplitude` conversion
-  - `eis/models/measurement_models.py`: acquisition result/progress models
+- `eis/models/measurement_models.py`: acquisition result/progress models
+- `eis/storage/` now includes:
+  - `naming.py`: naming helpers (`SERIAL_D_M_Y_H_M`)
+  - `folder_layout.py`: collision-safe run folder creation
+  - `metadata_writer.py`: metadata bank + HTML/PDF report generation
 - Next chunk:
   - processing pipeline (filtering, FFT, fitting, impedance extraction).
