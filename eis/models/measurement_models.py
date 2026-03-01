@@ -38,10 +38,63 @@ class HardwareConfig:
 
 @dataclass(frozen=True)
 class ExcitationConfig:
-    """Sine stimulus settings used for one or more measurements."""
+    """Sine stimulus settings used for one or more measurements.
 
-    amplitude_v: float
+    Inputs:
+        drive_mode: Excitation mode.
+            - ``"auto_from_current_rms"``: compute AO amplitude from
+              ``Current_rms`` using Clarke-Hess transconductance ranges.
+            - ``"fixed_ao_amplitude"``: use ``amplitude_v`` directly.
+        amplitude_v: AO sine peak amplitude in volts (V), used in fixed mode.
+        offset_v: AO sine offset in volts (V).
+        manual_current_range: Optional fixed range name for auto mode
+            (for example ``"20A"``). If omitted, range is selected automatically.
+        range_selection_policy: Auto-selection policy. Currently:
+            - ``"prefer_no_overrange"``
+    Output:
+        Immutable excitation settings object.
+    """
+
+    drive_mode: str = "auto_from_current_rms"
+    amplitude_v: float = 0.2
     offset_v: float = 0.0
+    manual_current_range: str | None = None
+    range_selection_policy: str = "prefer_no_overrange"
+
+
+@dataclass(frozen=True)
+class TransconductanceRange:
+    """One Clarke-Hess 8100 current range definition.
+
+    Inputs:
+        name: Range label shown to users, for example ``"20A"``.
+        transconductance_siemens: Range transconductance in Siemens (A/V).
+        min_current_rms_a: Lower supported current in amperes RMS (A).
+        full_scale_current_rms_a: Nominal full-scale current in amperes RMS (A).
+        max_current_rms_a: Maximum supported current in amperes RMS (A).
+        input_full_scale_vrms: Input voltage in volts RMS (V) at full-scale current.
+    Output:
+        Immutable current range definition.
+    """
+
+    name: str
+    transconductance_siemens: float
+    min_current_rms_a: float
+    full_scale_current_rms_a: float
+    max_current_rms_a: float
+    input_full_scale_vrms: float
+
+
+@dataclass(frozen=True)
+class DriveAmplitudeResult:
+    """Computed AO drive settings derived from target current RMS."""
+
+    range_name: str
+    transconductance_siemens: float
+    current_rms_a: float
+    ao_input_vrms: float
+    ao_amplitude_v_peak: float
+    is_overrange: bool
 
 
 @dataclass(frozen=True)
@@ -64,6 +117,10 @@ class MeasurementCapture:
     sample_rate_sps: float
     n_periods: int
     current_rms: float
+    ao_amplitude_v_peak: float
+    ao_offset_v: float
+    current_range_name: str | None
+    transconductance_siemens: float | None
     started_at_utc_iso: str
     duration_s: float
     ai_channels: tuple[str, ...]

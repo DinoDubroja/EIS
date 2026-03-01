@@ -43,7 +43,10 @@ hardware = HardwareConfig(
     ai_channels=("ai0", "ai7"),
     input_mode="differential",
 )
-excitation = ExcitationConfig(amplitude_v=0.2, offset_v=0.0)
+excitation = ExcitationConfig(
+    drive_mode="auto_from_current_rms",
+    offset_v=0.0,
+)
 
 def on_progress(p):
     print(f"{p.completed_steps}/{p.total_steps} f={p.frequency_hz:.2f} Hz")
@@ -61,3 +64,28 @@ adapter.close()
 ```
 
 This returns raw captures in memory. Saving and plotting layers will be added in next chunks.
+
+## Automatic current-to-amplitude conversion (Chunk 3)
+- Default excitation mode is `auto_from_current_rms`.
+- `Current_rms` from config is treated as **A RMS**.
+- AO amplitude is computed using Clarke-Hess 8100 transconductance ranges from:
+  - `USB6451/Clarke Hess 8100 Datsheet.pdf`
+- Range selection policy:
+  - Prefer ranges where current is within 0-100% full scale.
+  - If not possible, use smallest range that still supports requested current.
+
+You can force a specific range:
+```python
+excitation = ExcitationConfig(
+    drive_mode="auto_from_current_rms",
+    manual_current_range="20A",
+)
+```
+
+Or bypass auto conversion:
+```python
+excitation = ExcitationConfig(
+    drive_mode="fixed_ao_amplitude",
+    amplitude_v=0.25,  # Vpeak
+)
+```

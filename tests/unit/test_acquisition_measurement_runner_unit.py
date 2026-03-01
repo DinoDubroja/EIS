@@ -44,7 +44,10 @@ class TestAcquisitionMeasurementRunnerUnit(unittest.TestCase):
             current_rms=10.0,
         )
         hardware = HardwareConfig(ai_channels=("ai0", "ai7"))
-        excitation = ExcitationConfig(amplitude_v=0.2, offset_v=0.0)
+        excitation = ExcitationConfig(
+            drive_mode="auto_from_current_rms",
+            offset_v=0.0,
+        )
 
         capture = run_measurement_point(
             adapter=adapter,
@@ -58,6 +61,9 @@ class TestAcquisitionMeasurementRunnerUnit(unittest.TestCase):
         self.assertEqual(capture.repeat_index, 2)
         self.assertEqual(capture.ai_channels, ("ai0", "ai7"))
         self.assertAlmostEqual(capture.ai_range_v, 2.5)
+        self.assertEqual(capture.current_range_name, "20A")
+        self.assertAlmostEqual(float(capture.transconductance_siemens), 10.0)
+        self.assertTrue(capture.ao_amplitude_v_peak > 0.0)
         self.assertEqual(capture.raw_data.shape, (2, 10))
         self.assertTrue(capture.duration_s >= 0.0)
         self.assertIn("T", capture.started_at_utc_iso)
@@ -88,6 +94,36 @@ class TestAcquisitionMeasurementRunnerUnit(unittest.TestCase):
                 excitation=excitation,
                 repeat_index=1,
             )
+
+    # Checks fixed amplitude mode is respected and no range metadata is added.
+    def test_run_measurement_point_fixed_amplitude_mode(self) -> None:
+        adapter = _FakeAdapter(np.zeros((2, 8), dtype=np.float64))
+        point = MeasurementPointConfig(
+            row_number=2,
+            frequency_hz=100.0,
+            ch0_range_v=2.5,
+            ch1_range_v=2.5,
+            sample_rate_sps=200000.0,
+            n_periods=10,
+            current_rms=5.0,
+        )
+        hardware = HardwareConfig(ai_channels=("ai0", "ai7"))
+        excitation = ExcitationConfig(
+            drive_mode="fixed_ao_amplitude",
+            amplitude_v=0.25,
+            offset_v=0.0,
+        )
+
+        capture = run_measurement_point(
+            adapter=adapter,
+            point=point,
+            hardware=hardware,
+            excitation=excitation,
+            repeat_index=1,
+        )
+        self.assertAlmostEqual(capture.ao_amplitude_v_peak, 0.25)
+        self.assertIsNone(capture.current_range_name)
+        self.assertIsNone(capture.transconductance_siemens)
 
 
 if __name__ == "__main__":

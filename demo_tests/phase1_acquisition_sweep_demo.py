@@ -60,7 +60,10 @@ def main() -> None:
 
     adapter = FakeAdapter()
     hardware = HardwareConfig(ai_channels=("ai0", "ai7"))
-    excitation = ExcitationConfig(amplitude_v=0.2, offset_v=0.0)
+    excitation = ExcitationConfig(
+        drive_mode="auto_from_current_rms",
+        offset_v=0.0,
+    )
 
     def on_progress(p) -> None:
         bar = _progress_bar_text(p.completed_steps, p.total_steps)
@@ -85,6 +88,11 @@ def main() -> None:
     print(f"Captures: {len(result.captures)}")
     print(f"Preflight: {result.preflight.message if result.preflight else 'skipped'}")
     print(f"First capture shape: {result.captures[0].raw_data.shape}")
+    print(f"First capture selected range: {result.captures[0].current_range_name}")
+    print(
+        "First capture AO amplitude (Vpeak): "
+        f"{result.captures[0].ao_amplitude_v_peak:.6f}"
+    )
 
 
 if __name__ == "__main__":

@@ -9,10 +9,12 @@ from eis.models.config_models import (
     SweepConfig,
 )
 from eis.models.measurement_models import (
+    DriveAmplitudeResult,
     ExcitationConfig,
     HardwareConfig,
     MeasurementCapture,
     PreflightCheckResult,
+    TransconductanceRange,
     SweepProgress,
     SweepRunResult,
 )
@@ -20,6 +22,7 @@ from eis.models.measurement_models import (
 __all__ = [
     "ConfigValidationError",
     "ConfigValidationIssue",
+    "DriveAmplitudeResult",
     "ExcitationConfig",
     "HardwareConfig",
     "MeasurementPointConfig",
@@ -27,6 +30,7 @@ __all__ = [
     "PreflightCheckResult",
     "RawConfigRow",
     "RawConfigTable",
+    "TransconductanceRange",
     "SweepProgress",
     "SweepConfig",
     "SweepRunResult",

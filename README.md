@@ -10,6 +10,7 @@ Repository for EIS measurement scripts and libraries
   - Acquisition adapter: `eis/acquisition/usb6451_adapter.py`
   - Sweep controller: `eis/acquisition/sweep_controller.py`
   - Runner/preflight: `eis/acquisition/measurement_runner.py`, `eis/acquisition/preflight_check.py`
+  - Current conversion: `eis/acquisition/transconductance.py` (Clarke-Hess 8100)
   - Acquisition models: `eis/models/measurement_models.py`
   - Architecture notes: `docs/architecture.md`
   - Usage notes: `docs/phase1_usage.md`
