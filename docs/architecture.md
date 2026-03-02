@@ -58,7 +58,10 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
   - `run_selection.py`: run discovery + filters from folder names
     - modes: `last`, `last_n`, `all`
     - filters: serial exact/contains, start-time range
-  - `impedance_plots.py`: Nyquist/Bode overlays over selected runs
-    from persisted `IMPEDANCE/impedance.csv` artifacts
+  - `impedance_plots.py`: Nyquist/Bode/SNR overlays over selected runs
+    from persisted `IMPEDANCE/impedance.csv` artifacts, including threshold checks
+    over all frequencies for each run.
+  - `raw_fit_plots.py`: raw-vs-fitted overlays from persisted `RAW/*.csv` captures
+    with per-channel fit summaries (amplitude, phase, residual RMS, SNR).
 - Next chunk:
-  - raw-vs-fit plotting and higher-level uncertainty analysis/report layering.
+  - higher-level uncertainty analysis/report layering.

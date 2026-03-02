@@ -14,6 +14,7 @@ Repository for EIS measurement scripts and libraries
   - Acquisition models: `eis/models/measurement_models.py`
   - Processing pipeline: `eis/processing/impedance_processor.py`
   - Plot selection + overlays: `eis/plotting/run_selection.py`, `eis/plotting/impedance_plots.py`
+  - Raw-vs-fitted plotting from saved RAW csv: `eis/plotting/raw_fit_plots.py`
   - Storage + metadata report:
     - `eis/storage/folder_layout.py`
     - `eis/storage/run_artifacts.py`
@@ -57,6 +58,8 @@ Metadata report default:
 - IMPEDANCE artifacts are consolidated in `IMPEDANCE/impedance.csv` (all frequencies + repeats)
 - `IMPEDANCE/summary_mean_std.csv` provides per-frequency repeat statistics
 - SNR per frequency/repeat is saved for both channels (`snr_current_db`, `snr_voltage_db`)
+- SNR plotting API supports threshold checks and translucent green/red threshold regions
+- Plot demo also generates noisy raw-vs-fitted channel overlays in `PLOTS/`
 - Acquisition conditioning supports fixed startup settling discard + periodic trim windowing for FFT leakage control
 
 ## TODO

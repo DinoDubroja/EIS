@@ -283,3 +283,51 @@ Demo script:
 ```python
 python demo_tests/phase1_plotting_selection_demo.py
 ```
+
+## Chunk 8: SNR vs Frequency Plot + Threshold Check
+Use persisted `IMPEDANCE/impedance.csv` rows to visualize SNR over frequency and
+run threshold checks over all points.
+
+```python
+from eis import RunSelection, plot_snr_vs_frequency
+
+fig, ax, runs, checks = plot_snr_vs_frequency(
+    base_output_dir="measurements",
+    selection=RunSelection(mode="last_n", last_n=3, serial_contains="Z100N34"),
+    snr_source="voltage",        # "current" also supported
+    threshold_db=20.0,
+    good_region="below_threshold",  # use "above_threshold" for conventional SNR acceptance
+    save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/snr_voltage.png",
+)
+
+for item in checks:
+    print(item.run.root.name, item.passed, item.min_snr_db, item.max_snr_db)
+```
+
+Plot shading:
+- green: configured good region
+- red: configured bad region
+- dashed line: threshold
+
+## Chunk 9: Raw vs Fitted Plot from Saved RAW CSV
+Load one persisted raw capture file and overlay fitted fundamental signals.
+
+```python
+from eis import plot_raw_vs_fitted_from_csv
+
+fig, axes, result = plot_raw_vs_fitted_from_csv(
+    raw_csv_path=(
+        "measurements/Z100N34_1_3_2026_14_45/"
+        "RAW/row_0002_f10Hz/repeat_001_raw_ch1_ai0_ch2_ai7.csv"
+    ),
+    frequency_hz=10.0,  # optional if path contains row_*_f*Hz folder name
+    save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/raw_vs_fit.png",
+)
+
+for channel in result.channel_summaries:
+    print(channel.channel_name, channel.snr_db, channel.amplitude_v_peak)
+```
+
+`demo_tests/phase1_plotting_selection_demo.py` now also generates:
+- SNR-frequency plot in `PLOTS/demo_snr_filtered.png`
+- noisy raw-vs-fitted plot in `PLOTS/demo_raw_vs_fitted_noise.png`

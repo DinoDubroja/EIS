@@ -19,6 +19,7 @@ from eis.plotting import (
     plot_impedance_bode,
     plot_impedance_inverse_nyquist,
     plot_impedance_nyquist,
+    plot_snr_vs_frequency,
 )
 from eis.storage.folder_layout import create_run_folder_layout
 from eis.storage.run_artifacts import write_impedance_summary_mean_std_csv, write_impedance_table_csv
@@ -34,10 +35,10 @@ class TestPlottingImpedancePlotsUnit(unittest.TestCase):
             started_at_local=dt,
         )
         rows = (
-            ImpedancePointResult(2, 1, 10.0, 5.0, 1.0, 5.099, 11.3099, "fft"),
-            ImpedancePointResult(2, 2, 10.0, 5.1, 1.1, 5.217, 12.168, "fft"),
-            ImpedancePointResult(3, 1, 20.0, 4.8, 0.8, 4.866, 9.462, "fft"),
-            ImpedancePointResult(3, 2, 20.0, 4.9, 0.9, 4.982, 10.408, "fft"),
+            ImpedancePointResult(2, 1, 10.0, 5.0, 1.0, 5.099, 11.3099, "fft", 10.0, 11.0),
+            ImpedancePointResult(2, 2, 10.0, 5.1, 1.1, 5.217, 12.168, "fft", 11.0, 12.0),
+            ImpedancePointResult(3, 1, 20.0, 4.8, 0.8, 4.866, 9.462, "fft", 12.0, 13.0),
+            ImpedancePointResult(3, 2, 20.0, 4.9, 0.9, 4.982, 10.408, "fft", 13.0, 14.0),
         )
         write_impedance_table_csv(results=rows, output_path=layout.impedance / "impedance.csv")
         write_impedance_summary_mean_std_csv(
@@ -122,6 +123,30 @@ class TestPlottingImpedancePlotsUnit(unittest.TestCase):
             self.assertEqual(selected[0].serial_number, "BETA")
             self.assertEqual(len(axes[0].lines), 1)
             self.assertEqual(len(axes[1].lines), 1)
+
+    # Checks SNR threshold view and per-run pass/fail evaluation.
+    def test_plot_snr_vs_frequency_threshold_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            self._create_run_with_impedance(base, "SN_A", datetime(2026, 3, 1, 9, 0))
+            self._create_run_with_impedance(base, "SN_B", datetime(2026, 3, 1, 10, 0))
+
+            fig, ax, selected, checks = plot_snr_vs_frequency(
+                base_output_dir=base,
+                selection=RunSelection(mode="last"),
+                snr_source="voltage",
+                threshold_db=20.0,
+                good_region="below_threshold",
+            )
+
+            self.assertIsNotNone(fig)
+            self.assertEqual(len(selected), 1)
+            self.assertEqual(len(checks), 1)
+            self.assertTrue(checks[0].passed)
+            self.assertEqual(checks[0].checked_points, 2)
+            self.assertGreaterEqual(len(ax.patches), 1)
+            self.assertEqual(ax.get_xlabel(), "Frequency (Hz)")
+            self.assertEqual(ax.get_ylabel(), "SNR (dB)")
 
 
 if __name__ == "__main__":

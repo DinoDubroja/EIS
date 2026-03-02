@@ -1,13 +1,20 @@
-"""Impedance plotting helpers with run selection from measurement folders.
+"""Impedance plotting helpers for single-run and multi-run notebook workflows.
 
-Primary use case:
-- In notebooks, quickly plot newest run, last N runs, or all runs.
-- Filter candidate runs by serial number and local start time.
-- Overlay selected runs on Nyquist/Bode views for comparison.
+This module intentionally keeps plotting entry points small and explicit so
+technicians and engineers can read function signatures and understand:
+- which measurement runs are selected from disk
+- how repeats are aggregated before plotting
+- where output images are written for report/notebook usage
+
+Current views:
+- Nyquist and inverse Nyquist overlays
+- Bode magnitude/phase overlays
+- SNR vs frequency overlays with threshold-region shading and pass/fail checks
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -15,6 +22,31 @@ import numpy as np
 
 from eis.plotting.run_selection import RunFolderRecord, RunSelection, select_run_folders
 from eis.storage.run_artifacts import load_impedance_rows_from_run
+
+
+@dataclass(frozen=True)
+class SNRThresholdCheckResult:
+    """Threshold check result for one plotted run in SNR-vs-frequency view.
+
+    Fields:
+        run: Run metadata inferred from the run folder name.
+        checked_points: Number of SNR points checked against threshold.
+        threshold_db: Threshold used for this check.
+        good_region: Rule used to classify pass/fail:
+            - ``"below_threshold"``
+            - ``"above_threshold"``
+        passed: True if all checked points are in the configured good region.
+        min_snr_db: Minimum SNR value in checked points.
+        max_snr_db: Maximum SNR value in checked points.
+    """
+
+    run: RunFolderRecord
+    checked_points: int
+    threshold_db: float
+    good_region: str
+    passed: bool
+    min_snr_db: float
+    max_snr_db: float
 
 
 def _run_label(run: RunFolderRecord) -> str:
@@ -62,6 +94,63 @@ def _extract_impedance_series(
         dtype=np.complex128,
     )
     return frequencies, z_values
+
+
+def _extract_snr_series(
+    rows: list[dict[str, object]],
+    *,
+    snr_key: str,
+    aggregate_repeats: bool,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Extract frequency and SNR arrays from impedance row dictionaries."""
+
+    cleaned = [
+        item for item in rows if item.get(snr_key) is not None and str(item.get(snr_key)) != ""
+    ]
+    if not cleaned:
+        return np.asarray([], dtype=np.float64), np.asarray([], dtype=np.float64)
+
+    if aggregate_repeats:
+        grouped: dict[float, list[float]] = {}
+        for row in cleaned:
+            frequency_hz = float(row["frequency_hz"])
+            grouped.setdefault(frequency_hz, []).append(float(row[snr_key]))
+        frequencies = np.asarray(sorted(grouped.keys()), dtype=np.float64)
+        values = np.asarray([np.mean(grouped[freq]) for freq in frequencies], dtype=np.float64)
+        return frequencies, values
+
+    sorted_rows = sorted(cleaned, key=lambda item: (float(item["frequency_hz"]), int(item["repeat_index"])))
+    frequencies = np.asarray([float(item["frequency_hz"]) for item in sorted_rows], dtype=np.float64)
+    values = np.asarray([float(item[snr_key]) for item in sorted_rows], dtype=np.float64)
+    return frequencies, values
+
+
+def _normalize_snr_key(snr_source: str) -> str:
+    """Map user-facing SNR source aliases to impedance table column names."""
+
+    normalized = snr_source.strip().lower()
+    mapping = {
+        "current": "snr_current_db",
+        "ch1": "snr_current_db",
+        "ai0": "snr_current_db",
+        "voltage": "snr_voltage_db",
+        "ch2": "snr_voltage_db",
+        "ai7": "snr_voltage_db",
+    }
+    if normalized not in mapping:
+        raise ValueError(
+            "snr_source must be one of: current, voltage, ch1, ch2, ai0, ai7."
+        )
+    return mapping[normalized]
+
+
+def _normalize_good_region(good_region: str) -> str:
+    """Validate and normalize threshold pass/fail orientation."""
+
+    normalized = good_region.strip().lower()
+    if normalized not in {"below_threshold", "above_threshold"}:
+        raise ValueError("good_region must be 'below_threshold' or 'above_threshold'.")
+    return normalized
 
 
 def plot_impedance_nyquist(
@@ -262,3 +351,144 @@ def plot_impedance_bode(
         fig.savefig(output, dpi=140)
 
     return fig, (ax_mag, ax_phase), selected_runs
+
+
+def plot_snr_vs_frequency(
+    *,
+    base_output_dir: str | Path,
+    selection: RunSelection | None = None,
+    snr_source: str = "voltage",
+    aggregate_repeats: bool = True,
+    threshold_db: float | None = None,
+    good_region: str = "below_threshold",
+    ax=None,
+    title: str | None = None,
+    save_path: str | Path | None = None,
+) -> tuple[
+    plt.Figure,
+    plt.Axes,
+    tuple[RunFolderRecord, ...],
+    tuple[SNRThresholdCheckResult, ...],
+]:
+    """Plot SNR vs frequency with optional threshold shading and run checks.
+
+    Inputs:
+        base_output_dir: Root output folder containing measurement run folders.
+        selection: Run selection/filter configuration.
+        snr_source: SNR column source:
+            - ``"current"``/``"ch1"``/``"ai0"``
+            - ``"voltage"``/``"ch2"``/``"ai7"``
+        aggregate_repeats: If true, SNR is averaged per frequency over repeats.
+        threshold_db: Optional SNR threshold for pass/fail checks.
+        good_region: How threshold is interpreted:
+            - ``"below_threshold"``: values <= threshold are considered good.
+            - ``"above_threshold"``: values >= threshold are considered good.
+        ax: Optional matplotlib axis. If omitted, a new figure is created.
+        title: Optional custom title.
+        save_path: Optional output image path. If provided, figure is saved.
+    Output:
+        Tuple ``(fig, ax, selected_runs, threshold_results)``.
+    Notes:
+        Default ``good_region="below_threshold"`` follows current demo
+        preference. For conventional SNR acceptance checks, use
+        ``good_region="above_threshold"``.
+    Raises:
+        ValueError: No runs matched or no SNR rows were found for source.
+    """
+
+    selected_runs = select_run_folders(base_output_dir=base_output_dir, selection=selection)
+    if not selected_runs:
+        raise ValueError("No run folders matched requested selection.")
+
+    snr_key = _normalize_snr_key(snr_source)
+    threshold_rule = _normalize_good_region(good_region)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(7.2, 5.0))
+    else:
+        fig = ax.figure
+
+    checks: list[SNRThresholdCheckResult] = []
+    plotted = 0
+
+    for run in selected_runs:
+        rows = load_impedance_rows_from_run(run.root)
+        if not rows:
+            continue
+        frequencies, snr_values = _extract_snr_series(
+            rows,
+            snr_key=snr_key,
+            aggregate_repeats=aggregate_repeats,
+        )
+        if snr_values.size == 0:
+            continue
+
+        ax.plot(
+            frequencies,
+            snr_values,
+            marker="o",
+            linewidth=1.2,
+            label=_run_label(run),
+        )
+        plotted += 1
+
+        if threshold_db is not None:
+            if threshold_rule == "below_threshold":
+                passed = bool(np.all(snr_values <= threshold_db))
+            else:
+                passed = bool(np.all(snr_values >= threshold_db))
+            checks.append(
+                SNRThresholdCheckResult(
+                    run=run,
+                    checked_points=int(snr_values.size),
+                    threshold_db=float(threshold_db),
+                    good_region=threshold_rule,
+                    passed=passed,
+                    min_snr_db=float(np.min(snr_values)),
+                    max_snr_db=float(np.max(snr_values)),
+                )
+            )
+
+    if plotted == 0:
+        raise ValueError("Selected runs contain no SNR rows to plot for requested snr_source.")
+
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("SNR (dB)")
+    ax.set_xscale("log")
+    ax.set_title(title or f"SNR vs Frequency ({snr_key})")
+    ax.grid(True, which="both", alpha=0.3)
+
+    if threshold_db is not None:
+        y_low, y_high = ax.get_ylim()
+        y_low = min(y_low, float(threshold_db))
+        y_high = max(y_high, float(threshold_db))
+        ax.set_ylim(y_low, y_high)
+
+        if threshold_rule == "below_threshold":
+            good_low, good_high = y_low, min(float(threshold_db), y_high)
+            bad_low, bad_high = max(float(threshold_db), y_low), y_high
+        else:
+            good_low, good_high = max(float(threshold_db), y_low), y_high
+            bad_low, bad_high = y_low, min(float(threshold_db), y_high)
+
+        if good_high > good_low:
+            ax.axhspan(good_low, good_high, color="#2ca02c", alpha=0.16, zorder=0)
+        if bad_high > bad_low:
+            ax.axhspan(bad_low, bad_high, color="#d62728", alpha=0.16, zorder=0)
+        ax.axhline(
+            float(threshold_db),
+            color="black",
+            linestyle="--",
+            linewidth=1.0,
+            label=f"threshold {threshold_db:.3g} dB",
+        )
+
+    ax.legend(loc="best", fontsize=8)
+    fig.tight_layout()
+
+    if save_path is not None:
+        output = Path(save_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=140)
+
+    return fig, ax, selected_runs, tuple(checks)
