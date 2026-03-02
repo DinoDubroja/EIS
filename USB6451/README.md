@@ -62,7 +62,7 @@ High-level helper class for NI USB-6451 control.
   - Runs a short synchronized AO+AI preflight check for USB-6451 connectivity.
   - Uses a constant AO test level and confirms returned AI sample shape.
   - Discards configurable startup-settling time before validation.
-  - Applies overall mean-voltage tolerance check against AO test level.
+  - Applies current-channel shunt-voltage tolerance check (single overall pass/fail).
   - Intended for "check hardware before sweep" workflows.
 - `stop_sync_io()`
   - Stops and releases synchronized AO+AI tasks.

@@ -60,11 +60,14 @@ result = execute_sweep(
     repeats=1,
     run_preflight=True,
     # Preflight defaults:
-    # - AO test level: 1.0 V
+    # - test current: 10.0 A RMS (converted to AO DC using Clarke-Hess range)
+    # - shunt expectation: V_shunt = I_test * 0.008 Ohm
+    # - shunt tolerance band on current channel: +/-0.01 V
     # - startup discard: 0.15 s
-    # - mean tolerance: +/-0.2 V
-    # You can override via preflight_ao_test_voltage,
-    # preflight_settle_discard_s, preflight_voltage_tolerance_v.
+    # You can override via preflight_test_current_rms_a,
+    # preflight_manual_current_range, preflight_shunt_resistance_ohm,
+    # preflight_shunt_voltage_tolerance_v, preflight_current_channel_index,
+    # preflight_settle_discard_s.
     conditioning=CaptureConditioningConfig(
         settle_discard_s=0.15,      # fixed settling cut at measurement start
         extra_periods_for_trim=1,   # acquire N+1 periods for periodic trim margin

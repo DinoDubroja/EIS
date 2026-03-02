@@ -95,7 +95,13 @@ class SweepConfig:
 
 @dataclass(frozen=True)
 class ConfigValidationIssue:
-    """One validation issue collected while checking config data."""
+    """One validation issue collected while checking config data.
+
+    Fields:
+        message: Human-readable issue description.
+        row_number: Optional source Excel row number for context.
+        column: Optional source column header for context.
+    """
 
     message: str
     row_number: int | None = None
@@ -117,7 +123,11 @@ class ConfigValidationIssue:
 
 
 class ConfigValidationError(ValueError):
-    """Validation error carrying one or more explicit config issues."""
+    """Validation error carrying one or more explicit config issues.
+
+    This exception preserves structured issue entries while also exposing one
+    aggregated text message suitable for CLI/notebook display.
+    """
 
     def __init__(self, issues: Sequence[ConfigValidationIssue]) -> None:
         if not issues:

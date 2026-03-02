@@ -15,7 +15,15 @@ from eis.storage.naming import build_run_folder_name
 
 @dataclass(frozen=True)
 class RunFolderLayout:
-    """Resolved folder paths for one measurement run."""
+    """Resolved absolute folder paths for one created measurement run.
+
+    Fields:
+        root: Run root folder (``SERIAL_D_M_Y_H_M``).
+        raw: Folder containing per-point/per-repeat RAW csv captures.
+        plots: Folder containing generated plot images.
+        impedance: Folder containing consolidated impedance tables.
+        reports: Folder containing generated reports (HTML/PDF).
+    """
 
     root: Path
     raw: Path

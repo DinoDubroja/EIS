@@ -143,7 +143,14 @@ def build_metadata_bank(
 
 
 def write_metadata_bank_txt(metadata_bank: dict[str, Any], output_path: str | Path) -> Path:
-    """Write machine-readable metadata bank to ``.txt`` as JSON."""
+    """Write machine-readable metadata bank to ``.txt`` as JSON.
+
+    Inputs:
+        metadata_bank: Metadata payload returned by ``build_metadata_bank``.
+        output_path: Target file path for JSON text bank.
+    Output:
+        Path of written metadata bank file.
+    """
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -152,7 +159,14 @@ def write_metadata_bank_txt(metadata_bank: dict[str, Any], output_path: str | Pa
 
 
 def write_metadata_bank_csv(metadata_bank: dict[str, Any], output_path: str | Path) -> Path:
-    """Write per-capture metadata table to CSV."""
+    """Write per-capture metadata table to CSV.
+
+    Inputs:
+        metadata_bank: Metadata payload containing ``captures`` table.
+        output_path: Target csv output path.
+    Output:
+        Path of written csv file.
+    """
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -195,7 +209,14 @@ def write_metadata_bank_csv(metadata_bank: dict[str, Any], output_path: str | Pa
 
 
 def write_metadata_report_html(metadata_bank: dict[str, Any], output_path: str | Path) -> Path:
-    """Render a visual HTML metadata report from metadata bank."""
+    """Render a human-readable HTML metadata report from metadata bank.
+
+    Inputs:
+        metadata_bank: Metadata payload containing identity/hardware/sweep data.
+        output_path: Target HTML report path.
+    Output:
+        Path of written HTML report.
+    """
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -388,7 +409,14 @@ def write_metadata_report_html(metadata_bank: dict[str, Any], output_path: str |
 
 
 def write_metadata_report_pdf(metadata_bank: dict[str, Any], output_path: str | Path) -> Path:
-    """Render PDF metadata report using matplotlib backend."""
+    """Render PDF metadata report using matplotlib backend.
+
+    Inputs:
+        metadata_bank: Metadata payload containing run summary and captures.
+        output_path: Target PDF report path.
+    Output:
+        Path of written PDF file.
+    """
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -541,7 +569,15 @@ def regenerate_reports_from_bank(
     html_output_path: str | Path,
     pdf_output_path: str | Path,
 ) -> tuple[Path, Path]:
-    """Regenerate HTML/PDF reports from metadata bank file."""
+    """Regenerate HTML/PDF reports from one metadata bank JSON text file.
+
+    Inputs:
+        metadata_bank_txt_path: Source metadata-bank text file path.
+        html_output_path: Target HTML report path.
+        pdf_output_path: Target PDF report path.
+    Output:
+        Tuple ``(html_path, pdf_path)`` of regenerated reports.
+    """
 
     bank = json.loads(Path(metadata_bank_txt_path).read_text(encoding="utf-8"))
     html_path = write_metadata_report_html(bank, html_output_path)

@@ -512,9 +512,11 @@ class TestUSB6451Unit(unittest.TestCase):
             ai_channels=("ai0", "ai7"),
             sample_rate=20_000.0,
             samples_per_channel=64,
-            ao_test_voltage=0.0,
+            ao_test_voltage=1.0,
             settle_discard_s=0.0,
-            voltage_tolerance_v=2000.0,
+            expected_current_channel_voltage_v=31.5,
+            current_channel_tolerance_v=1.0,
+            current_channel_index=0,
             input_mode="differential",
         )
         self.assertEqual(result.device, "Dev1")
@@ -550,8 +552,8 @@ class TestUSB6451Unit(unittest.TestCase):
                 settle_discard_s=0.01,
             )
 
-    # Checks preflight fails when measured mean is outside configured tolerance.
-    def test_validate_sync_connection_fails_voltage_tolerance_check(self) -> None:
+    # Checks preflight fails when current-channel shunt mean is outside tolerance.
+    def test_validate_sync_connection_fails_shunt_tolerance_check(self) -> None:
         with self.assertRaises(RuntimeError):
             self.dev.validate_sync_connection(
                 device="Dev1",
@@ -559,9 +561,10 @@ class TestUSB6451Unit(unittest.TestCase):
                 ai_channels=("ai0", "ai7"),
                 sample_rate=20_000.0,
                 samples_per_channel=64,
-                ao_test_voltage=0.0,
+                ao_test_voltage=1.0,
                 settle_discard_s=0.0,
-                voltage_tolerance_v=0.1,
+                expected_current_channel_voltage_v=0.0,
+                current_channel_tolerance_v=0.1,
             )
 
     # Checks synchronized read rejects calls when sync tasks are not running.

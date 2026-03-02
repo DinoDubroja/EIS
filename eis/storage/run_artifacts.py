@@ -35,7 +35,16 @@ _SAFE_TOKEN_PATTERN = re.compile(r"[^A-Za-z0-9]+")
 
 @dataclass(frozen=True)
 class CaptureArtifactRecord:
-    """File linkage record for one capture (one row + one repeat)."""
+    """File-link metadata for one capture (one row and one repeat).
+
+    Fields:
+        row_number: Source config row number (1-based).
+        repeat_index: Repeat index (1-based).
+        frequency_hz: Capture frequency in hertz (Hz).
+        raw_csv_relpath: Relative path to saved raw csv artifact.
+        impedance_csv_relpath: Relative path to consolidated impedance csv when
+            impedance rows were persisted for this capture.
+    """
 
     row_number: int
     repeat_index: int
@@ -46,7 +55,14 @@ class CaptureArtifactRecord:
 
 @dataclass(frozen=True)
 class PointSummaryArtifactRecord:
-    """Linkage record for one frequency summary row in summary table."""
+    """Link metadata for one per-frequency summary row in summary table.
+
+    Fields:
+        row_number: Source config row number.
+        frequency_hz: Frequency represented by this summary.
+        repeat_count: Number of repeats included in summary statistics.
+        summary_csv_relpath: Relative path to summary csv artifact.
+    """
 
     row_number: int
     frequency_hz: float
@@ -56,7 +72,12 @@ class PointSummaryArtifactRecord:
 
 @dataclass(frozen=True)
 class PersistedRunArtifacts:
-    """Container with all saved artifact link records for one run."""
+    """Container with all saved artifact-link records for one run.
+
+    Fields:
+        capture_artifacts: One link record per capture/repeat raw artifact.
+        point_summaries: One link record per frequency summary entry.
+    """
 
     capture_artifacts: tuple[CaptureArtifactRecord, ...]
     point_summaries: tuple[PointSummaryArtifactRecord, ...]
@@ -136,7 +157,16 @@ def write_impedance_table_csv(
     results: tuple[ImpedancePointResult, ...] | list[ImpedancePointResult],
     output_path: str | Path,
 ) -> Path:
-    """Write consolidated impedance table with one row per frequency/repeat."""
+    """Write consolidated impedance table with one row per frequency/repeat.
+
+    Inputs:
+        results: Per-repeat impedance rows for one run.
+        output_path: Target ``impedance.csv`` path.
+    Output:
+        Path of written consolidated impedance table.
+    Raises:
+        ValueError: No impedance rows were provided.
+    """
 
     if not results:
         raise ValueError("results must contain at least one impedance row.")
@@ -402,7 +432,13 @@ def persist_run_artifacts(
 def build_artifact_link_payload(
     artifacts: PersistedRunArtifacts,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Convert typed artifact records into metadata-bank payload tables."""
+    """Convert typed artifact records into metadata-bank payload tables.
+
+    Inputs:
+        artifacts: Typed run artifact linkage object.
+    Output:
+        Tuple ``(capture_rows, point_summary_rows)`` ready for metadata bank.
+    """
 
     capture_rows = [
         {
@@ -478,7 +514,13 @@ def load_impedance_rows_from_run(run_root: str | Path) -> list[dict[str, Any]]:
 
 
 def load_impedance_rows_from_base(base_output_dir: str | Path) -> list[dict[str, Any]]:
-    """Load per-repeat impedance rows from all run folders under base directory."""
+    """Load per-repeat impedance rows from all run folders under base directory.
+
+    Inputs:
+        base_output_dir: Root output directory containing run folders.
+    Output:
+        Flat list of parsed impedance rows from all discoverable run folders.
+    """
 
     base = Path(base_output_dir)
     if not base.exists():

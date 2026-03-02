@@ -321,7 +321,16 @@ def compute_impedance_for_capture(
     capture: MeasurementCapture,
     config: ImpedanceProcessingConfig | None = None,
 ) -> ImpedancePointResult:
-    """Compute one impedance result row from one capture."""
+    """Compute one impedance result row from one synchronized capture.
+
+    Inputs:
+        capture: Raw capture object containing channel data and sweep metadata.
+        config: Optional processing settings (method/filter/shunt mapping).
+    Output:
+        ``ImpedancePointResult`` for one frequency and repeat index.
+    Raises:
+        ValueError: Capture shape/config values are invalid for extraction.
+    """
 
     effective = config or ImpedanceProcessingConfig()
     _validate_processing_config(effective)
@@ -417,7 +426,14 @@ def compute_impedance_for_run(
     run_result: SweepRunResult,
     config: ImpedanceProcessingConfig | None = None,
 ) -> tuple[ImpedancePointResult, ...]:
-    """Compute impedance rows for all captures in one run result."""
+    """Compute impedance result rows for all captures in one sweep run.
+
+    Inputs:
+        run_result: Sweep output containing one or more captures.
+        config: Optional processing settings reused for each capture.
+    Output:
+        Tuple of ``ImpedancePointResult`` entries in capture order.
+    """
 
     rows = [
         compute_impedance_for_capture(capture=capture, config=config)

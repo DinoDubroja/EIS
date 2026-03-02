@@ -39,9 +39,12 @@ def execute_sweep(
     run_preflight: bool = True,
     preflight_sample_rate_sps: float | None = None,
     preflight_samples_per_channel: int | None = None,
-    preflight_ao_test_voltage: float = 1.0,
+    preflight_test_current_rms_a: float = 10.0,
+    preflight_manual_current_range: str | None = None,
+    preflight_shunt_resistance_ohm: float = 0.008,
+    preflight_shunt_voltage_tolerance_v: float = 0.01,
+    preflight_current_channel_index: int = 0,
     preflight_settle_discard_s: float = 0.15,
-    preflight_voltage_tolerance_v: float = 0.2,
     conditioning: CaptureConditioningConfig | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> SweepRunResult:
@@ -58,9 +61,13 @@ def execute_sweep(
         preflight_samples_per_channel: Optional preflight sample count per AI
             channel. If omitted, it is sized automatically from preflight
             sample rate and settling discard time.
-        preflight_ao_test_voltage: AO test level during preflight in volts (V).
+        preflight_test_current_rms_a: Current target used to build preflight AO DC.
+        preflight_manual_current_range: Optional fixed Clarke-Hess range for
+            preflight current-to-voltage conversion.
+        preflight_shunt_resistance_ohm: Nominal shunt value used for expectation.
+        preflight_shunt_voltage_tolerance_v: Allowed shunt-voltage error band.
+        preflight_current_channel_index: AI channel index used as current channel.
         preflight_settle_discard_s: Time discarded from preflight capture start.
-        preflight_voltage_tolerance_v: Allowed mean-voltage error in volts (V).
         conditioning: Settling discard and periodic trim strategy per capture.
         progress_callback: Optional callback for progress updates.
     Output:
@@ -97,14 +104,23 @@ def execute_sweep(
             raise ValueError(
                 "preflight_samples_per_channel is too small for requested preflight_settle_discard_s."
             )
+        effective_preflight_range = (
+            preflight_manual_current_range
+            if preflight_manual_current_range is not None
+            else excitation.manual_current_range
+        )
         preflight_result = run_preflight_check(
             adapter=adapter,
             hardware=hardware,
             sample_rate_sps=chosen_preflight_rate,
             samples_per_channel=chosen_preflight_samples,
-            ao_test_voltage=preflight_ao_test_voltage,
+            test_current_rms_a=preflight_test_current_rms_a,
+            manual_current_range=effective_preflight_range,
+            range_selection_policy=excitation.range_selection_policy,
+            shunt_resistance_ohm=preflight_shunt_resistance_ohm,
+            shunt_voltage_tolerance_v=preflight_shunt_voltage_tolerance_v,
+            current_channel_index=preflight_current_channel_index,
             settle_discard_s=preflight_settle_discard_s,
-            voltage_tolerance_v=preflight_voltage_tolerance_v,
         )
 
     total_steps = len(sweep.points) * repeats

@@ -12,11 +12,14 @@ Last updated: 2026-03-02
 - Work in chunks/phases.
 - Before each implementation pass, re-read the initial `.docx` prompt.
 - If requirements are unclear or preference-based, ask follow-up questions.
+- Before implementing any change, provide plan summary and ask permission to proceed.
 - If restructuring is needed, explain the proposed restructure and ask permission first.
 - Do not perform destructive changes without explicit permission.
 - Prioritize modularity, expandability, robustness, and documentation clarity over speed.
 - Suggest better implementation when a requested approach is technically weak, with reasoning.
 - Propose next steps whenever a chunk is completed.
+- Do not invent new schemas/requirements not stated in prompt or later decisions.
+- Explain advanced syntax/conventions and computation-time optimizations in practical terms when needed.
 
 ## 3) Repo and git rules
 - Keep work on `dev` branch.
@@ -45,6 +48,10 @@ Last updated: 2026-03-02
 - Acquisition and signal generation must be synchronous.
 - Configuration is driven by Excel `.xlsx`, with automatic validation.
 - Run a preflight DAQ connection check before measurement.
+- Preflight is current-target based:
+  - set test current
+  - compute AO DC level from transconductance/range
+  - validate expected shunt voltage on current channel (single overall pass/fail)
 - Support repeated measurements per frequency.
 - Show progress while sweep is running.
 - Support non-integer-divisor frequencies relative to sample rate.
@@ -86,6 +93,7 @@ Last updated: 2026-03-02
 - `description.txt` must be generated only when description is provided (no empty description file).
 - Metadata/report artifacts should enable report regeneration if report files are deleted.
 - Phase 1 keeps uncertainty architecture expandable; full uncertainty/report logic continues later.
+- Metadata bank should preserve enough information to regenerate report outputs.
 
 ## 10) Plotting rules
 - Plot APIs must work for:
@@ -115,6 +123,7 @@ Last updated: 2026-03-02
 - Document what each test/demo validates.
 - Demos should reflect realistic frequency coverage (use many points like config file where applicable).
 - Include synthetic-noise demos where requested (for example SNR and raw-vs-fitted behavior).
+- Validate and test new behavior as part of each implementation chunk.
 
 ## 12) Uncertainty and statistics roadmap rules
 - Type A uncertainty workflow will rely on repeated measurements and folder-level statistics APIs.
@@ -126,3 +135,30 @@ Last updated: 2026-03-02
 - Initial prompt referenced NI USB-6351, but project target is now explicitly NI USB-6451.
 - Initial prompt said report generation is future work; current agreed scope includes metadata HTML report generation in `REPORTS/`.
 - Initial prompt allowed `.txt`/`.xlsx` metadata; current workflow uses metadata-bank files for regeneration plus HTML report as preferred human-facing output.
+
+## 14) Explicit prompt checklist (condensed)
+- Measurement flow:
+  - generate sine/current stimulus
+  - measure N periods
+  - analyze and save
+  - repeat across frequency list
+- User-selectable processing path:
+  - FFT extraction
+  - sine-fitting extraction
+  - optional lowpass/bandpass before extraction
+- Leakage-control option must exist (N+1/trim or equivalent periodic-window approach).
+- User-selectable saved artifacts include:
+  - raw DAQ csv
+  - impedance csv
+  - uncertainty csv (later full implementation)
+  - plot images
+  - metadata bank/report artifacts
+- Default folder structure includes `RAW/`, `PLOTS/`, `IMPEDANCE/`, `REPORTS/`.
+- File names must remain descriptive and traceable.
+- Data-safety behavior:
+  - if destination run folder already exists, block acquisition and warn clearly.
+- Notebook Phase 1 goal:
+  - load config
+  - choose what to save
+  - run measurement
+  - plot raw-vs-fit and Nyquist/Bode from resulting data

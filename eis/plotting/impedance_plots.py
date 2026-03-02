@@ -207,7 +207,20 @@ def plot_impedance_inverse_nyquist(
     title: str | None = None,
     save_path: str | Path | None = None,
 ) -> tuple[plt.Figure, plt.Axes, tuple[RunFolderRecord, ...]]:
-    """Plot inverse Nyquist overlay (R vs -X) for selected run folders."""
+    """Plot inverse Nyquist overlay (R vs -X) for selected run folders.
+
+    Inputs:
+        base_output_dir: Root output folder containing measurement run folders.
+        selection: Run selection/filter configuration.
+        aggregate_repeats: If true, average repeats per frequency.
+        ax: Optional matplotlib axis.
+        title: Optional custom title.
+        save_path: Optional output image path.
+    Output:
+        Tuple ``(fig, ax, selected_runs)`` for notebook/report chaining.
+    Raises:
+        ValueError: No matched runs or no impedance rows available to plot.
+    """
 
     selected_runs = select_run_folders(base_output_dir=base_output_dir, selection=selection)
     if not selected_runs:

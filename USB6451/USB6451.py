@@ -152,7 +152,17 @@ class SyncConnectionValidationResult:
 
 
 class USB6451:
-    """High-level wrapper for NI USB-6451 analog I/O operations."""
+    """High-level wrapper for NI USB-6451 analog I/O operations.
+
+    Purpose:
+        Provide readable, reusable APIs for synchronized and non-synchronized
+        AO/AI workflows used by impedance measurement notebooks and scripts.
+    Scope:
+        - continuous AO generation (periodic and non-regenerative)
+        - continuous and finite AI measurement
+        - finite synchronized AO+AI capture
+        - finite sine-period helper and connection preflight checks
+    """
 
     # USB-6451 AO output FIFO size (manual): 16,383 samples shared among channels used.
     MAX_REGENERATIVE_PERIOD_SAMPLES = 16_383
@@ -1217,8 +1227,10 @@ class USB6451:
         sample_rate: float = 20_000.0,
         samples_per_channel: int = 256,
         ao_test_voltage: float = 1.0,
+        expected_current_channel_voltage_v: float | None = None,
+        current_channel_tolerance_v: float = 0.01,
+        current_channel_index: int = 0,
         settle_discard_s: float = 0.15,
-        voltage_tolerance_v: float = 0.2,
         ao_min_voltage: float = -10.0,
         ao_max_voltage: float = 10.0,
         ai_min_voltage: float = -10.0,
@@ -1240,9 +1252,14 @@ class USB6451:
             sample_rate: Shared AO/AI sample clock in samples/second (S/s).
             samples_per_channel: Samples acquired per AI channel. Must be >= 1.
             ao_test_voltage: Constant AO level in volts (V) used for the test.
+            expected_current_channel_voltage_v: Expected mean shunt-voltage level
+                on the configured current channel after settling discard. If
+                omitted, only synchronized shape check is performed.
+            current_channel_tolerance_v: Allowed error around expected shunt
+                voltage when expectation is provided.
+            current_channel_index: Index of current/shunt channel in ``ai_channels``.
             settle_discard_s: Initial capture time in seconds discarded before
-                checking measured means against test voltage.
-            voltage_tolerance_v: Allowed absolute mean error from test voltage.
+                checking measured means against expected shunt voltage.
             ao_min_voltage: AO lower limit in volts (V).
             ao_max_voltage: AO upper limit in volts (V).
             ai_min_voltage: AI lower limit in volts (V).
@@ -1265,8 +1282,10 @@ class USB6451:
             raise ValueError("samples_per_channel must be >= 1.")
         if settle_discard_s < 0:
             raise ValueError("settle_discard_s must be >= 0.")
-        if voltage_tolerance_v <= 0:
-            raise ValueError("voltage_tolerance_v must be > 0.")
+        if current_channel_tolerance_v <= 0:
+            raise ValueError("current_channel_tolerance_v must be > 0.")
+        if current_channel_index < 0:
+            raise ValueError("current_channel_index must be >= 0.")
         if ao_min_voltage >= ao_max_voltage:
             raise ValueError("ao_min_voltage must be smaller than ao_max_voltage.")
         if ao_test_voltage < ao_min_voltage or ao_test_voltage > ao_max_voltage:
@@ -1283,6 +1302,11 @@ class USB6451:
             )
 
         channels = self._normalize_ai_channels(ai_channels)
+        if current_channel_index >= len(channels):
+            raise ValueError(
+                "current_channel_index is outside ai_channels range: "
+                f"index={current_channel_index}, channel_count={len(channels)}."
+            )
         test_output = np.full(samples_per_channel, ao_test_voltage, dtype=np.float64)
         ai_data = self.measure_sync_finite(
             output_samples=test_output,
@@ -1313,19 +1337,30 @@ class USB6451:
                 "No usable preflight samples after settling discard. "
                 "Increase samples_per_channel or reduce settle_discard_s."
             )
-        channel_means = np.mean(usable, axis=1)
-        lower_bound = float(ao_test_voltage - voltage_tolerance_v)
-        upper_bound = float(ao_test_voltage + voltage_tolerance_v)
-        passed = bool(
-            np.all((channel_means >= lower_bound) & (channel_means <= upper_bound))
-        )
-        if not passed:
-            mean_min = float(np.min(channel_means))
-            mean_max = float(np.max(channel_means))
-            raise RuntimeError(
-                "Synchronized AO+AI preflight failed overall mean-voltage tolerance check: "
-                f"target={ao_test_voltage:.6g} V, tolerance=+/-{voltage_tolerance_v:.6g} V, "
-                f"observed_mean_span=[{mean_min:.6g}, {mean_max:.6g}] V."
+        current_channel_mean_v = float(np.mean(usable[current_channel_index]))
+        if expected_current_channel_voltage_v is not None:
+            lower_bound = float(
+                expected_current_channel_voltage_v - current_channel_tolerance_v
+            )
+            upper_bound = float(
+                expected_current_channel_voltage_v + current_channel_tolerance_v
+            )
+            if not (lower_bound <= current_channel_mean_v <= upper_bound):
+                raise RuntimeError(
+                    "Synchronized AO+AI preflight failed current-channel shunt-voltage check: "
+                    f"expected={expected_current_channel_voltage_v:.6g} V, "
+                    f"tolerance=+/-{current_channel_tolerance_v:.6g} V, "
+                    f"measured={current_channel_mean_v:.6g} V, "
+                    f"channel_index={current_channel_index}."
+                )
+            status_text = (
+                f"expected_shunt={expected_current_channel_voltage_v:.6g} V, "
+                f"tolerance=+/-{current_channel_tolerance_v:.6g} V, "
+                f"measured={current_channel_mean_v:.6g} V"
+            )
+        else:
+            status_text = (
+                f"no_shunt_expectation_provided, measured_current_channel={current_channel_mean_v:.6g} V"
             )
 
         return SyncConnectionValidationResult(
@@ -1338,8 +1373,8 @@ class USB6451:
             message=(
                 "Synchronized AO+AI preflight PASS "
                 f"for {device.strip()} with {len(channels)} AI channel(s): "
-                f"target={ao_test_voltage:.6g} V, tolerance=+/-{voltage_tolerance_v:.6g} V, "
-                f"discard={settle_discard_s:.6g} s."
+                f"ao_dc={ao_test_voltage:.6g} V, discard={settle_discard_s:.6g} s, "
+                f"current_channel_index={current_channel_index}, {status_text}."
             ),
         )
 

@@ -18,7 +18,13 @@ from eis.storage.naming import parse_run_folder_name
 
 @dataclass(frozen=True)
 class RunFolderRecord:
-    """Resolved metadata for one measurement run folder."""
+    """Resolved metadata for one measurement run folder.
+
+    Fields:
+        root: Absolute path to run folder.
+        serial_number: Serial token parsed from run folder name.
+        started_at_local: Local run start timestamp parsed from folder name.
+    """
 
     root: Path
     serial_number: str
@@ -93,7 +99,16 @@ def filter_run_folders(
     runs: tuple[RunFolderRecord, ...] | list[RunFolderRecord],
     selection: RunSelection,
 ) -> tuple[RunFolderRecord, ...]:
-    """Apply serial/time filters and mode-based reduction."""
+    """Apply serial/time filters and reduce candidate list by selection mode.
+
+    Inputs:
+        runs: Candidate run-folder records.
+        selection: Requested filtering and reduction settings.
+    Output:
+        Filtered tuple of run-folder records in ascending time order.
+    Raises:
+        ValueError: Selection mode or ``last_n`` value is invalid.
+    """
 
     mode = _normalize_mode(selection.mode)
     rows = list(runs)
@@ -129,7 +144,14 @@ def select_run_folders(
     base_output_dir: str | Path,
     selection: RunSelection | None = None,
 ) -> tuple[RunFolderRecord, ...]:
-    """Discover and filter run folders with one convenience call."""
+    """Discover and filter run folders with one convenience call.
+
+    Inputs:
+        base_output_dir: Root directory containing measurement run folders.
+        selection: Optional selection/filter settings.
+    Output:
+        Tuple of run folders matching requested criteria.
+    """
 
     effective = selection or RunSelection(mode="last")
     discovered = discover_run_folders(base_output_dir)

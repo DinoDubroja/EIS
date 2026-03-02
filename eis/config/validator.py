@@ -51,7 +51,17 @@ _COLUMN_ALIASES = {
 
 
 def load_and_validate_config(xlsx_path: str | Path, sheet_name: str | None = None) -> SweepConfig:
-    """Load and validate one measurement config workbook in one call."""
+    """Load workbook and return fully validated sweep config in one call.
+
+    Inputs:
+        xlsx_path: Path to measurement configuration workbook.
+        sheet_name: Optional sheet name override. If omitted, first sheet is
+            used by loader defaults.
+    Output:
+        ``SweepConfig`` ready for acquisition execution.
+    Raises:
+        ConfigValidationError: Workbook content failed schema/value checks.
+    """
 
     raw_table = load_config_table(xlsx_path=xlsx_path, sheet_name=sheet_name)
     return validate_config_table(raw_table)

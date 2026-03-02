@@ -37,7 +37,16 @@ _FALLBACK_COLOR = "#4d4d4d"
 
 @dataclass(frozen=True)
 class ChannelFitSummary:
-    """Sine-fit summary for one raw channel."""
+    """Sine-fit summary values for one raw channel trace.
+
+    Fields:
+        channel_name: CSV column name of fitted channel.
+        amplitude_v_peak: Fitted fundamental amplitude in volts peak (Vpk).
+        phase_deg: Fitted fundamental phase in degrees.
+        offset_v: Fitted DC offset in volts.
+        residual_rms_v: RMS of residual after fundamental fit.
+        snr_db: Fundamental-to-residual ratio expressed in decibels.
+    """
 
     channel_name: str
     amplitude_v_peak: float
@@ -49,7 +58,13 @@ class ChannelFitSummary:
 
 @dataclass(frozen=True)
 class RawFitPlotResult:
-    """Returned metadata summary for one raw-vs-fitted plot call."""
+    """Returned metadata container from one raw-vs-fitted plotting call.
+
+    Fields:
+        raw_csv_path: Source raw capture csv path used for the plot.
+        frequency_hz: Frequency used in fitting/annotation.
+        channel_summaries: Per-channel fit outputs for notebook/report reuse.
+    """
 
     raw_csv_path: Path
     frequency_hz: float

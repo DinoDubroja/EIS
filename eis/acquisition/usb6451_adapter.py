@@ -15,7 +15,13 @@ from eis.models.measurement_models import HardwareConfig, PreflightCheckResult
 
 
 class Usb6451Like(Protocol):
-    """Protocol for USB-6451 controller calls used by acquisition modules."""
+    """Protocol describing USB-6451 methods required by acquisition APIs.
+
+    Purpose:
+        Enable dependency injection for tests and demo backends without NI
+        hardware. Any object implementing these methods can be used by
+        ``USB6451Adapter`` and higher-level sweep logic.
+    """
 
     def validate_sync_connection(
         self,
@@ -26,8 +32,10 @@ class Usb6451Like(Protocol):
         sample_rate: float,
         samples_per_channel: int,
         ao_test_voltage: float,
+        expected_current_channel_voltage_v: float | None,
+        current_channel_tolerance_v: float,
+        current_channel_index: int,
         settle_discard_s: float,
-        voltage_tolerance_v: float,
         ao_min_voltage: float,
         ao_max_voltage: float,
         ai_min_voltage: float,
@@ -65,7 +73,11 @@ class Usb6451Like(Protocol):
 
 
 class USB6451Adapter:
-    """Thin adapter that maps EIS acquisition calls to USB6451 methods."""
+    """Adapter mapping EIS acquisition models to low-level USB6451 signatures.
+
+    This class keeps orchestration code independent from direct NI driver calls
+    and normalizes low-level return types into EIS dataclasses.
+    """
 
     def __init__(self, controller: Usb6451Like | None = None) -> None:
         """Create adapter with an optional injected USB6451 controller instance."""
@@ -86,8 +98,10 @@ class USB6451Adapter:
         sample_rate_sps: float,
         samples_per_channel: int = 256,
         ao_test_voltage: float = 1.0,
+        expected_current_channel_voltage_v: float | None = None,
+        current_channel_tolerance_v: float = 0.01,
+        current_channel_index: int = 0,
         settle_discard_s: float = 0.15,
-        voltage_tolerance_v: float = 0.2,
     ) -> PreflightCheckResult:
         """Run USB6451 synchronized connection preflight and normalize result model."""
 
@@ -98,8 +112,10 @@ class USB6451Adapter:
             sample_rate=sample_rate_sps,
             samples_per_channel=samples_per_channel,
             ao_test_voltage=ao_test_voltage,
+            expected_current_channel_voltage_v=expected_current_channel_voltage_v,
+            current_channel_tolerance_v=current_channel_tolerance_v,
+            current_channel_index=current_channel_index,
             settle_discard_s=settle_discard_s,
-            voltage_tolerance_v=voltage_tolerance_v,
             ao_min_voltage=hardware.ao_min_voltage,
             ao_max_voltage=hardware.ao_max_voltage,
             ai_min_voltage=hardware.ai_default_min_voltage,

@@ -93,6 +93,14 @@ class TestAcquisitionSweepControllerUnit(unittest.TestCase):
         self.assertIsNotNone(result.preflight)
         self.assertEqual(result.repeats, 3)
         self.assertAlmostEqual(float(adapter.preflight_calls[0]["ao_test_voltage"]), 1.0)
+        self.assertAlmostEqual(
+            float(adapter.preflight_calls[0]["expected_current_channel_voltage_v"]),
+            0.08,
+        )
+        self.assertAlmostEqual(
+            float(adapter.preflight_calls[0]["current_channel_tolerance_v"]),
+            0.01,
+        )
         self.assertAlmostEqual(float(adapter.preflight_calls[0]["settle_discard_s"]), 0.15)
 
         self.assertEqual(len(progress_events), 6)
@@ -125,6 +133,28 @@ class TestAcquisitionSweepControllerUnit(unittest.TestCase):
         )
         self.assertEqual(len(adapter.preflight_calls), 1)
         self.assertAlmostEqual(float(adapter.preflight_calls[0]["sample_rate_sps"]), 12345.0)
+
+    # Checks preflight current/range overrides propagate to computed AO/shunt targets.
+    def test_execute_sweep_preflight_current_and_range_override(self) -> None:
+        adapter = _FakeAdapter()
+
+        execute_sweep(
+            sweep=self._build_sweep(),
+            adapter=adapter,  # type: ignore[arg-type]
+            hardware=HardwareConfig(ai_channels=("ai0", "ai7")),
+            excitation=ExcitationConfig(drive_mode="auto_from_current_rms"),
+            repeats=1,
+            run_preflight=True,
+            preflight_test_current_rms_a=3.0,
+            preflight_manual_current_range="20A",
+        )
+
+        self.assertEqual(len(adapter.preflight_calls), 1)
+        self.assertAlmostEqual(float(adapter.preflight_calls[0]["ao_test_voltage"]), 0.3)
+        self.assertAlmostEqual(
+            float(adapter.preflight_calls[0]["expected_current_channel_voltage_v"]),
+            0.024,
+        )
 
 
 if __name__ == "__main__":

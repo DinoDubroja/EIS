@@ -96,7 +96,18 @@ class TransconductanceRange:
 
 @dataclass(frozen=True)
 class DriveAmplitudeResult:
-    """Computed AO drive settings derived from target current RMS."""
+    """Computed AO drive settings derived from target current RMS request.
+
+    Inputs:
+        range_name: Selected Clarke-Hess current range label.
+        transconductance_siemens: Range transconductance used for conversion.
+        current_rms_a: Requested current value in amperes RMS (A).
+        ao_input_vrms: Required amplifier input voltage in volts RMS (V).
+        ao_amplitude_v_peak: AO sine peak amplitude in volts (V) for measurement.
+        is_overrange: True when target current is above range full-scale current.
+    Output:
+        Immutable conversion result used by acquisition orchestration and logs.
+    """
 
     range_name: str
     transconductance_siemens: float
@@ -108,7 +119,16 @@ class DriveAmplitudeResult:
 
 @dataclass(frozen=True)
 class PreflightCheckResult:
-    """Result summary from DAQ synchronized connection preflight check."""
+    """Overall result summary from DAQ synchronized preflight check.
+
+    Inputs:
+        sample_rate_sps: Sample rate used during preflight in samples/second.
+        samples_per_channel: Captured sample count per AI channel.
+        measured_shape: Returned raw matrix shape as ``(channels, samples)``.
+        message: Human-readable PASS summary for logs and metadata.
+    Output:
+        Immutable preflight summary object attached to ``SweepRunResult``.
+    """
 
     sample_rate_sps: float
     samples_per_channel: int
@@ -142,7 +162,31 @@ class CaptureConditioningConfig:
 
 @dataclass(frozen=True)
 class MeasurementCapture:
-    """Raw capture from one frequency and one repeat in a sweep."""
+    """Raw capture record for one sweep row and one repeat index.
+
+    Inputs:
+        row_number: Source config row number (1-based).
+        repeat_index: Repeat number (1-based) for the same row.
+        frequency_hz: Commanded excitation frequency in hertz (Hz).
+        sample_rate_sps: Capture sample rate in samples/second (S/s).
+        n_periods: Requested measurement periods from config.
+        current_rms: Target current setting from config row.
+        ao_amplitude_v_peak: AO sine peak amplitude in volts (V).
+        ao_offset_v: AO DC offset in volts (V).
+        current_range_name: Selected Clarke-Hess range label, when applicable.
+        transconductance_siemens: Used range transconductance, when applicable.
+        started_at_utc_iso: Capture start timestamp in UTC ISO-8601 format.
+        duration_s: Capture call duration in seconds.
+        ai_channels: Ordered AI channels used in this capture.
+        ai_range_v: Shared absolute AI range magnitude used for both channels.
+        raw_data: Captured AI data matrix with shape ``(channels, samples)``.
+        acquired_periods: Actual periods acquired before trimming/conditioning.
+        discarded_settle_samples: Startup samples removed by settle discard.
+        periodic_window_start_sample: Start index of selected periodic window.
+        periodic_window_samples: Length of final periodic window.
+    Output:
+        Immutable capture object used by processing and storage layers.
+    """
 
     row_number: int
     repeat_index: int
@@ -201,7 +245,17 @@ class ImpedancePointResult:
 
 @dataclass(frozen=True)
 class SweepProgress:
-    """Progress update payload for UI progress bars and logs."""
+    """Progress payload emitted during sweep execution for UI/logging.
+
+    Inputs:
+        total_steps: Total number of row-repeat steps in current sweep run.
+        completed_steps: Completed row-repeat steps so far.
+        row_number: Active source config row number for this progress event.
+        frequency_hz: Active frequency in hertz (Hz).
+        repeat_index: Active repeat index (1-based) for this row.
+    Output:
+        Immutable progress event object.
+    """
 
     total_steps: int
     completed_steps: int
@@ -212,7 +266,17 @@ class SweepProgress:
 
 @dataclass(frozen=True)
 class SweepRunResult:
-    """Full sweep run output before processing/analysis stages."""
+    """Top-level sweep output before impedance processing/report generation.
+
+    Inputs:
+        started_at_utc_iso: Sweep start time in UTC ISO-8601 format.
+        finished_at_utc_iso: Sweep finish time in UTC ISO-8601 format.
+        repeats: Repeat count applied to each sweep row.
+        captures: Ordered tuple of all measurement captures in this run.
+        preflight: Optional synchronized preflight result summary.
+    Output:
+        Immutable run result consumed by processing and storage APIs.
+    """
 
     started_at_utc_iso: str
     finished_at_utc_iso: str
