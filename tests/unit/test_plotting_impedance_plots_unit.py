@@ -11,9 +11,15 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 
 from eis.models.measurement_models import ImpedancePointResult
-from eis.plotting import RunSelection, plot_impedance_bode, plot_impedance_nyquist
+from eis.plotting import (
+    RunSelection,
+    plot_impedance_bode,
+    plot_impedance_inverse_nyquist,
+    plot_impedance_nyquist,
+)
 from eis.storage.folder_layout import create_run_folder_layout
 from eis.storage.run_artifacts import write_impedance_summary_mean_std_csv, write_impedance_table_csv
 
@@ -58,6 +64,8 @@ class TestPlottingImpedancePlotsUnit(unittest.TestCase):
             self.assertIsNotNone(fig)
             self.assertEqual(len(selected), 2)
             self.assertEqual(len(ax.lines), 2)
+            self.assertEqual(ax.get_xlabel(), "R (Ohm)")
+            self.assertEqual(ax.get_ylabel(), "X (Ohm)")
 
     # Checks optional save_path writes output image file.
     def test_plot_impedance_nyquist_save_path(self) -> None:
@@ -72,6 +80,26 @@ class TestPlottingImpedancePlotsUnit(unittest.TestCase):
             )
             self.assertTrue(out_path.exists())
             self.assertTrue(out_path.stat().st_size > 0)
+
+    # Checks inverse Nyquist flips imaginary axis and labels it as -X.
+    def test_plot_impedance_inverse_nyquist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            self._create_run_with_impedance(base, "SN_A", datetime(2026, 3, 1, 9, 0))
+
+            _, ax_normal, _ = plot_impedance_nyquist(
+                base_output_dir=base,
+                selection=RunSelection(mode="last"),
+            )
+            _, ax_inverse, _ = plot_impedance_inverse_nyquist(
+                base_output_dir=base,
+                selection=RunSelection(mode="last"),
+            )
+
+            y_normal = ax_normal.lines[0].get_ydata()
+            y_inverse = ax_inverse.lines[0].get_ydata()
+            self.assertTrue(np.allclose(y_inverse, -y_normal))
+            self.assertEqual(ax_inverse.get_ylabel(), "-X (Ohm)")
 
     # Checks Bode plot supports serial and time filters inferred from folder names.
     def test_plot_impedance_bode_serial_and_time_filter(self) -> None:

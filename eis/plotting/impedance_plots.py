@@ -98,15 +98,70 @@ def plot_impedance_nyquist(
     else:
         fig = ax.figure
 
+    return _plot_nyquist_core(
+        selected_runs=selected_runs,
+        aggregate_repeats=aggregate_repeats,
+        ax=ax,
+        title=(title or "Nyquist Plot"),
+        y_mode="x",
+        y_label="X (Ohm)",
+        save_path=save_path,
+    )
+
+
+def plot_impedance_inverse_nyquist(
+    *,
+    base_output_dir: str | Path,
+    selection: RunSelection | None = None,
+    aggregate_repeats: bool = True,
+    ax=None,
+    title: str | None = None,
+    save_path: str | Path | None = None,
+) -> tuple[plt.Figure, plt.Axes, tuple[RunFolderRecord, ...]]:
+    """Plot inverse Nyquist overlay (R vs -X) for selected run folders."""
+
+    selected_runs = select_run_folders(base_output_dir=base_output_dir, selection=selection)
+    if not selected_runs:
+        raise ValueError("No run folders matched requested selection.")
+
+    return _plot_nyquist_core(
+        selected_runs=selected_runs,
+        aggregate_repeats=aggregate_repeats,
+        ax=ax,
+        title=(title or "Inverse Nyquist Plot"),
+        y_mode="minus_x",
+        y_label="-X (Ohm)",
+        save_path=save_path,
+    )
+
+
+def _plot_nyquist_core(
+    *,
+    selected_runs: tuple[RunFolderRecord, ...],
+    aggregate_repeats: bool,
+    ax,
+    title: str,
+    y_mode: str,
+    y_label: str,
+    save_path: str | Path | None,
+) -> tuple[plt.Figure, plt.Axes, tuple[RunFolderRecord, ...]]:
+    """Internal Nyquist plotting implementation shared by normal/inverse views."""
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(7.2, 5.0))
+    else:
+        fig = ax.figure
+
     plotted = 0
     for run in selected_runs:
         rows = load_impedance_rows_from_run(run.root)
         if not rows:
             continue
         _, z_values = _extract_impedance_series(rows, aggregate_repeats=aggregate_repeats)
+        y_values = np.imag(z_values) if y_mode == "x" else -np.imag(z_values)
         ax.plot(
             np.real(z_values),
-            -np.imag(z_values),
+            y_values,
             marker="o",
             linewidth=1.2,
             label=_run_label(run),
@@ -116,9 +171,9 @@ def plot_impedance_nyquist(
     if plotted == 0:
         raise ValueError("Selected runs contain no impedance rows to plot.")
 
-    ax.set_xlabel("Z' (Ohm)")
-    ax.set_ylabel("-Z'' (Ohm)")
-    ax.set_title(title or "Nyquist Plot")
+    ax.set_xlabel("R (Ohm)")
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
     ax.grid(True, alpha=0.3)
     ax.legend(loc="best", fontsize=8)
     fig.tight_layout()

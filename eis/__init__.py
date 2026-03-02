@@ -30,6 +30,7 @@ from eis.plotting import (
     RunFolderRecord,
     RunSelection,
     plot_impedance_bode,
+    plot_impedance_inverse_nyquist,
     plot_impedance_nyquist,
     select_run_folders,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "load_impedance_rows_from_run",
     "persist_run_artifacts",
     "plot_impedance_bode",
+    "plot_impedance_inverse_nyquist",
     "plot_impedance_nyquist",
     "regenerate_reports_from_bank",
     "run_measurement_point",
