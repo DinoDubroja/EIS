@@ -1,0 +1,23 @@
+R100L10N001_11_3_2026_15_11/
+	-description.txt
+	-metadata.txt
+	-RAW/
+		-RAW_CH1_F_53.14.csv
+			.	
+			.
+			.
+	-PLOTS/
+		-impedance_niquist.png
+		-RAW_CH1_F_53.14_FIT.png
+			.	
+			.
+			.
+	-IMPEDANCE/
+		-impedance.csv (freqeuncy, real, imag, amplitude, phase)
+		-impedance_uncertanty.csv (freqeuncy, real, imag, amplitude, phase, uncertanties of real, imag, ampl, phase)
+			.	
+			.
+			.
+	-REPORTS/
+		-R100L10N001.pdf
+	
