@@ -106,7 +106,7 @@ def main() -> None:
         repeats=2,
         run_preflight=True,
         conditioning=CaptureConditioningConfig(
-            settle_discard_s=0.02,
+            settle_discard_s=0.15,
             extra_periods_for_trim=1,
             alignment_search_periods=1,
         ),

@@ -92,6 +92,8 @@ class TestAcquisitionSweepControllerUnit(unittest.TestCase):
         self.assertEqual(len(result.captures), 6)
         self.assertIsNotNone(result.preflight)
         self.assertEqual(result.repeats, 3)
+        self.assertAlmostEqual(float(adapter.preflight_calls[0]["ao_test_voltage"]), 1.0)
+        self.assertAlmostEqual(float(adapter.preflight_calls[0]["settle_discard_s"]), 0.15)
 
         self.assertEqual(len(progress_events), 6)
         self.assertEqual(progress_events[-1].completed_steps, 6)

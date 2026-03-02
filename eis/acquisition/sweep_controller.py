@@ -38,8 +38,10 @@ def execute_sweep(
     repeats: int = 1,
     run_preflight: bool = True,
     preflight_sample_rate_sps: float | None = None,
-    preflight_samples_per_channel: int = 256,
-    preflight_ao_test_voltage: float = 0.0,
+    preflight_samples_per_channel: int | None = None,
+    preflight_ao_test_voltage: float = 1.0,
+    preflight_settle_discard_s: float = 0.15,
+    preflight_voltage_tolerance_v: float = 0.2,
     conditioning: CaptureConditioningConfig | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> SweepRunResult:
@@ -53,8 +55,12 @@ def execute_sweep(
         repeats: How many times each frequency point is repeated.
         run_preflight: Whether to run DAQ preflight check before sweep.
         preflight_sample_rate_sps: Optional sample rate override for preflight.
-        preflight_samples_per_channel: Preflight sample count per AI channel.
+        preflight_samples_per_channel: Optional preflight sample count per AI
+            channel. If omitted, it is sized automatically from preflight
+            sample rate and settling discard time.
         preflight_ao_test_voltage: AO test level during preflight in volts (V).
+        preflight_settle_discard_s: Time discarded from preflight capture start.
+        preflight_voltage_tolerance_v: Allowed mean-voltage error in volts (V).
         conditioning: Settling discard and periodic trim strategy per capture.
         progress_callback: Optional callback for progress updates.
     Output:
@@ -78,12 +84,27 @@ def execute_sweep(
             if preflight_sample_rate_sps is not None
             else float(sweep.points[0].sample_rate_sps)
         )
+        if preflight_settle_discard_s < 0:
+            raise ValueError("preflight_settle_discard_s must be >= 0.")
+        required_settle_samples = int(round(preflight_settle_discard_s * chosen_preflight_rate))
+        auto_analysis_samples = max(64, int(round(0.02 * chosen_preflight_rate)))
+        chosen_preflight_samples = (
+            int(preflight_samples_per_channel)
+            if preflight_samples_per_channel is not None
+            else (required_settle_samples + auto_analysis_samples)
+        )
+        if chosen_preflight_samples <= required_settle_samples:
+            raise ValueError(
+                "preflight_samples_per_channel is too small for requested preflight_settle_discard_s."
+            )
         preflight_result = run_preflight_check(
             adapter=adapter,
             hardware=hardware,
             sample_rate_sps=chosen_preflight_rate,
-            samples_per_channel=preflight_samples_per_channel,
+            samples_per_channel=chosen_preflight_samples,
             ao_test_voltage=preflight_ao_test_voltage,
+            settle_discard_s=preflight_settle_discard_s,
+            voltage_tolerance_v=preflight_voltage_tolerance_v,
         )
 
     total_steps = len(sweep.points) * repeats

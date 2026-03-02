@@ -59,8 +59,14 @@ result = execute_sweep(
     excitation=excitation,
     repeats=1,
     run_preflight=True,
+    # Preflight defaults:
+    # - AO test level: 1.0 V
+    # - startup discard: 0.15 s
+    # - mean tolerance: +/-0.2 V
+    # You can override via preflight_ao_test_voltage,
+    # preflight_settle_discard_s, preflight_voltage_tolerance_v.
     conditioning=CaptureConditioningConfig(
-        settle_discard_s=0.02,      # fixed settling cut at measurement start
+        settle_discard_s=0.15,      # fixed settling cut at measurement start
         extra_periods_for_trim=1,   # acquire N+1 periods for periodic trim margin
         alignment_search_periods=1, # search one period for minimal edge discontinuity
     ),

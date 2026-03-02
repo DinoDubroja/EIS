@@ -513,6 +513,8 @@ class TestUSB6451Unit(unittest.TestCase):
             sample_rate=20_000.0,
             samples_per_channel=64,
             ao_test_voltage=0.0,
+            settle_discard_s=0.0,
+            voltage_tolerance_v=2000.0,
             input_mode="differential",
         )
         self.assertEqual(result.device, "Dev1")
@@ -533,6 +535,33 @@ class TestUSB6451Unit(unittest.TestCase):
                 ao_test_voltage=11.0,
                 ao_min_voltage=-10.0,
                 ao_max_voltage=10.0,
+            )
+
+    # Checks preflight rejects settle discard windows longer than captured record.
+    def test_validate_sync_connection_rejects_too_large_settle_discard(self) -> None:
+        with self.assertRaises(ValueError):
+            self.dev.validate_sync_connection(
+                device="Dev1",
+                ao_channel="ao0",
+                ai_channels=("ai0",),
+                sample_rate=20_000.0,
+                samples_per_channel=64,
+                ao_test_voltage=0.0,
+                settle_discard_s=0.01,
+            )
+
+    # Checks preflight fails when measured mean is outside configured tolerance.
+    def test_validate_sync_connection_fails_voltage_tolerance_check(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.dev.validate_sync_connection(
+                device="Dev1",
+                ao_channel="ao0",
+                ai_channels=("ai0", "ai7"),
+                sample_rate=20_000.0,
+                samples_per_channel=64,
+                ao_test_voltage=0.0,
+                settle_discard_s=0.0,
+                voltage_tolerance_v=0.1,
             )
 
     # Checks synchronized read rejects calls when sync tasks are not running.

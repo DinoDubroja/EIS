@@ -1216,7 +1216,9 @@ class USB6451:
         ai_channels: str | Sequence[str] = ("ai0", "ai7"),
         sample_rate: float = 20_000.0,
         samples_per_channel: int = 256,
-        ao_test_voltage: float = 0.0,
+        ao_test_voltage: float = 1.0,
+        settle_discard_s: float = 0.15,
+        voltage_tolerance_v: float = 0.2,
         ao_min_voltage: float = -10.0,
         ao_max_voltage: float = 10.0,
         ai_min_voltage: float = -10.0,
@@ -1238,6 +1240,9 @@ class USB6451:
             sample_rate: Shared AO/AI sample clock in samples/second (S/s).
             samples_per_channel: Samples acquired per AI channel. Must be >= 1.
             ao_test_voltage: Constant AO level in volts (V) used for the test.
+            settle_discard_s: Initial capture time in seconds discarded before
+                checking measured means against test voltage.
+            voltage_tolerance_v: Allowed absolute mean error from test voltage.
             ao_min_voltage: AO lower limit in volts (V).
             ao_max_voltage: AO upper limit in volts (V).
             ai_min_voltage: AI lower limit in volts (V).
@@ -1258,12 +1263,23 @@ class USB6451:
 
         if samples_per_channel < 1:
             raise ValueError("samples_per_channel must be >= 1.")
+        if settle_discard_s < 0:
+            raise ValueError("settle_discard_s must be >= 0.")
+        if voltage_tolerance_v <= 0:
+            raise ValueError("voltage_tolerance_v must be > 0.")
         if ao_min_voltage >= ao_max_voltage:
             raise ValueError("ao_min_voltage must be smaller than ao_max_voltage.")
         if ao_test_voltage < ao_min_voltage or ao_test_voltage > ao_max_voltage:
             raise ValueError(
                 "ao_test_voltage must be inside AO limits: "
                 f"[{ao_min_voltage:.3f}, {ao_max_voltage:.3f}] V."
+            )
+
+        settle_discard_samples = int(round(settle_discard_s * sample_rate))
+        if settle_discard_samples >= samples_per_channel:
+            raise ValueError(
+                "settle_discard_s is too large for samples_per_channel at chosen sample_rate. "
+                f"discard_samples={settle_discard_samples}, samples_per_channel={samples_per_channel}."
             )
 
         channels = self._normalize_ai_channels(ai_channels)
@@ -1291,6 +1307,27 @@ class USB6451:
                 f"expected {expected_shape}, got {measured_shape}."
             )
 
+        usable = ai_data[:, settle_discard_samples:]
+        if usable.shape[1] < 1:
+            raise RuntimeError(
+                "No usable preflight samples after settling discard. "
+                "Increase samples_per_channel or reduce settle_discard_s."
+            )
+        channel_means = np.mean(usable, axis=1)
+        lower_bound = float(ao_test_voltage - voltage_tolerance_v)
+        upper_bound = float(ao_test_voltage + voltage_tolerance_v)
+        passed = bool(
+            np.all((channel_means >= lower_bound) & (channel_means <= upper_bound))
+        )
+        if not passed:
+            mean_min = float(np.min(channel_means))
+            mean_max = float(np.max(channel_means))
+            raise RuntimeError(
+                "Synchronized AO+AI preflight failed overall mean-voltage tolerance check: "
+                f"target={ao_test_voltage:.6g} V, tolerance=+/-{voltage_tolerance_v:.6g} V, "
+                f"observed_mean_span=[{mean_min:.6g}, {mean_max:.6g}] V."
+            )
+
         return SyncConnectionValidationResult(
             device=device.strip(),
             ao_channel=ao_channel.strip(),
@@ -1299,8 +1336,10 @@ class USB6451:
             samples_per_channel=samples_per_channel,
             measured_shape=measured_shape,
             message=(
-                "Synchronized AO+AI connection check passed "
-                f"for {device.strip()} with {len(channels)} AI channel(s)."
+                "Synchronized AO+AI preflight PASS "
+                f"for {device.strip()} with {len(channels)} AI channel(s): "
+                f"target={ao_test_voltage:.6g} V, tolerance=+/-{voltage_tolerance_v:.6g} V, "
+                f"discard={settle_discard_s:.6g} s."
             ),
         )
 

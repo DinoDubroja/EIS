@@ -26,6 +26,8 @@ class Usb6451Like(Protocol):
         sample_rate: float,
         samples_per_channel: int,
         ao_test_voltage: float,
+        settle_discard_s: float,
+        voltage_tolerance_v: float,
         ao_min_voltage: float,
         ao_max_voltage: float,
         ai_min_voltage: float,
@@ -83,7 +85,9 @@ class USB6451Adapter:
         hardware: HardwareConfig,
         sample_rate_sps: float,
         samples_per_channel: int = 256,
-        ao_test_voltage: float = 0.0,
+        ao_test_voltage: float = 1.0,
+        settle_discard_s: float = 0.15,
+        voltage_tolerance_v: float = 0.2,
     ) -> PreflightCheckResult:
         """Run USB6451 synchronized connection preflight and normalize result model."""
 
@@ -94,6 +98,8 @@ class USB6451Adapter:
             sample_rate=sample_rate_sps,
             samples_per_channel=samples_per_channel,
             ao_test_voltage=ao_test_voltage,
+            settle_discard_s=settle_discard_s,
+            voltage_tolerance_v=voltage_tolerance_v,
             ao_min_voltage=hardware.ao_min_voltage,
             ao_max_voltage=hardware.ao_max_voltage,
             ai_min_voltage=hardware.ai_default_min_voltage,

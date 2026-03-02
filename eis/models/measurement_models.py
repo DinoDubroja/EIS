@@ -135,7 +135,7 @@ class CaptureConditioningConfig:
         behavior matches previous direct-capture flow.
     """
 
-    settle_discard_s: float = 0.02
+    settle_discard_s: float = 0.15
     extra_periods_for_trim: int = 1
     alignment_search_periods: int = 1
 
