@@ -62,11 +62,11 @@ result = execute_sweep(
     # Preflight defaults:
     # - test current: 10.0 A RMS (converted to AO DC using Clarke-Hess range)
     # - shunt expectation: V_shunt = I_test * 0.008 Ohm
-    # - shunt tolerance band on current channel: +/-0.01 V
+    # - shunt tolerance band on current channel: +/-15% of expected V_shunt
     # - startup discard: 0.15 s
     # You can override via preflight_test_current_rms_a,
     # preflight_manual_current_range, preflight_shunt_resistance_ohm,
-    # preflight_shunt_voltage_tolerance_v, preflight_current_channel_index,
+    # preflight_shunt_voltage_tolerance_percent, preflight_current_channel_index,
     # preflight_settle_discard_s.
     conditioning=CaptureConditioningConfig(
         settle_discard_s=0.15,      # fixed settling cut at measurement start

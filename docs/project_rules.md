@@ -52,6 +52,7 @@ Last updated: 2026-03-02
   - set test current
   - compute AO DC level from transconductance/range
   - validate expected shunt voltage on current channel (single overall pass/fail)
+  - tolerance is defined as percent of expected shunt voltage
 - Support repeated measurements per frequency.
 - Show progress while sweep is running.
 - Support non-integer-divisor frequencies relative to sample rate.

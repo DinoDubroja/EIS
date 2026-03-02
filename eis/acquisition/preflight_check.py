@@ -22,7 +22,7 @@ def run_preflight_check(
     manual_current_range: str | None = None,
     range_selection_policy: str = "prefer_no_overrange",
     shunt_resistance_ohm: float = 0.008,
-    shunt_voltage_tolerance_v: float = 0.01,
+    shunt_voltage_tolerance_percent: float = 15.0,
     current_channel_index: int = 0,
     settle_discard_s: float = 0.15,
 ) -> PreflightCheckResult:
@@ -37,7 +37,8 @@ def run_preflight_check(
         manual_current_range: Optional fixed transconductance range name.
         range_selection_policy: Auto-selection policy when range is not fixed.
         shunt_resistance_ohm: Nominal shunt resistance in ohms (Ohm).
-        shunt_voltage_tolerance_v: Allowed error band for expected shunt voltage.
+        shunt_voltage_tolerance_percent: Allowed relative error around expected
+            shunt voltage, expressed in percent (%).
         current_channel_index: AI index used for shunt voltage channel validation.
         settle_discard_s: Settling interval discarded from start of captured data.
     Output:
@@ -52,8 +53,8 @@ def run_preflight_check(
         raise ValueError("test_current_rms_a must be > 0 A.")
     if shunt_resistance_ohm <= 0:
         raise ValueError("shunt_resistance_ohm must be > 0.")
-    if shunt_voltage_tolerance_v <= 0:
-        raise ValueError("shunt_voltage_tolerance_v must be > 0.")
+    if shunt_voltage_tolerance_percent <= 0:
+        raise ValueError("shunt_voltage_tolerance_percent must be > 0.")
     if current_channel_index < 0:
         raise ValueError("current_channel_index must be >= 0.")
 
@@ -64,6 +65,9 @@ def run_preflight_check(
     )
     ao_test_voltage = float(drive.ao_input_vrms)
     expected_shunt_voltage_v = float(test_current_rms_a * shunt_resistance_ohm)
+    shunt_voltage_tolerance_v = float(
+        abs(expected_shunt_voltage_v) * (shunt_voltage_tolerance_percent / 100.0)
+    )
 
     base_result = adapter.run_preflight_check(
         hardware=hardware,
@@ -82,6 +86,8 @@ def run_preflight_check(
         message=(
             f"{base_result.message} | range={drive.range_name}, "
             f"test_current={test_current_rms_a:.6g} A, "
-            f"expected_shunt={expected_shunt_voltage_v:.6g} V"
+            f"expected_shunt={expected_shunt_voltage_v:.6g} V, "
+            f"tolerance=+/-{shunt_voltage_tolerance_percent:.6g}% "
+            f"(+/-{shunt_voltage_tolerance_v:.6g} V)"
         ),
     )

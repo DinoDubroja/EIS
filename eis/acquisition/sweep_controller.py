@@ -42,7 +42,7 @@ def execute_sweep(
     preflight_test_current_rms_a: float = 10.0,
     preflight_manual_current_range: str | None = None,
     preflight_shunt_resistance_ohm: float = 0.008,
-    preflight_shunt_voltage_tolerance_v: float = 0.01,
+    preflight_shunt_voltage_tolerance_percent: float = 15.0,
     preflight_current_channel_index: int = 0,
     preflight_settle_discard_s: float = 0.15,
     conditioning: CaptureConditioningConfig | None = None,
@@ -65,7 +65,8 @@ def execute_sweep(
         preflight_manual_current_range: Optional fixed Clarke-Hess range for
             preflight current-to-voltage conversion.
         preflight_shunt_resistance_ohm: Nominal shunt value used for expectation.
-        preflight_shunt_voltage_tolerance_v: Allowed shunt-voltage error band.
+        preflight_shunt_voltage_tolerance_percent: Allowed shunt-voltage error
+            as percent of expected shunt voltage.
         preflight_current_channel_index: AI channel index used as current channel.
         preflight_settle_discard_s: Time discarded from preflight capture start.
         conditioning: Settling discard and periodic trim strategy per capture.
@@ -118,7 +119,7 @@ def execute_sweep(
             manual_current_range=effective_preflight_range,
             range_selection_policy=excitation.range_selection_policy,
             shunt_resistance_ohm=preflight_shunt_resistance_ohm,
-            shunt_voltage_tolerance_v=preflight_shunt_voltage_tolerance_v,
+            shunt_voltage_tolerance_percent=preflight_shunt_voltage_tolerance_percent,
             current_channel_index=preflight_current_channel_index,
             settle_discard_s=preflight_settle_discard_s,
         )

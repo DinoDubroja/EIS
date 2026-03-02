@@ -99,7 +99,7 @@ class TestAcquisitionSweepControllerUnit(unittest.TestCase):
         )
         self.assertAlmostEqual(
             float(adapter.preflight_calls[0]["current_channel_tolerance_v"]),
-            0.01,
+            0.012,
         )
         self.assertAlmostEqual(float(adapter.preflight_calls[0]["settle_discard_s"]), 0.15)
 
