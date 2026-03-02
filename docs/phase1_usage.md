@@ -239,6 +239,9 @@ impedance_results = compute_impedance_for_run(
 Notes:
 - Current channel is interpreted as shunt voltage (`I = V_shunt / R_shunt_nominal`).
 - DUT channel is interpreted as DUT voltage (`Z = V_dut / I`).
+- SNR is computed per frequency/repeat for both channels and saved in `IMPEDANCE/impedance.csv`:
+  - `snr_current_db`
+  - `snr_voltage_db`
 - Uncertainty propagation (Type A/Type B) is intentionally deferred to later chunk.
 
 ## Chunk 7: Multi-Run Plot Selection (last / last_n / all)

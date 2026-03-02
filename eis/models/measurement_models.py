@@ -179,6 +179,8 @@ class ImpedancePointResult:
         z_phase_deg: Impedance phase in degrees (deg).
         extraction_method: Method label used to compute impedance.
             Examples: ``"fft"``, ``"sine_fit"``, ``"demo_placeholder"``.
+        snr_current_db: Estimated SNR in dB for current channel (shunt voltage).
+        snr_voltage_db: Estimated SNR in dB for voltage channel (DUT voltage).
         notes: Optional free text with additional context.
     Output:
         Immutable impedance result record for storage and statistics.
@@ -192,6 +194,8 @@ class ImpedancePointResult:
     z_magnitude_ohm: float
     z_phase_deg: float
     extraction_method: str
+    snr_current_db: float | None = None
+    snr_voltage_db: float | None = None
     notes: str | None = None
 
 

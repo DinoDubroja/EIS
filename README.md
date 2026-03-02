@@ -56,6 +56,7 @@ Metadata report default:
 - RAW artifacts are stored per row/repeat and linked in metadata bank
 - IMPEDANCE artifacts are consolidated in `IMPEDANCE/impedance.csv` (all frequencies + repeats)
 - `IMPEDANCE/summary_mean_std.csv` provides per-frequency repeat statistics
+- SNR per frequency/repeat is saved for both channels (`snr_current_db`, `snr_voltage_db`)
 - Acquisition conditioning supports fixed startup settling discard + periodic trim windowing for FFT leakage control
 
 ## TODO

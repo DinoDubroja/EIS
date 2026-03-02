@@ -75,6 +75,12 @@ class FakeAdapter:
         # Add small deterministic harmonic + dc terms so filter options are visible.
         v_shunt = v_shunt + 0.0008 * np.sin(3.0 * omega * t) + 0.0003
         v_dut = v_dut + 0.03 * np.sin(3.0 * omega * t + 0.2) - 0.005
+
+        # Add synthetic random noise (deterministic seed for reproducible demos).
+        seed = int(round(frequency_hz * 100.0)) + int(kwargs["n_periods"]) + 20260302
+        rng = np.random.default_rng(seed)
+        v_shunt = v_shunt + rng.normal(loc=0.0, scale=2.5e-4, size=sample_count)
+        v_dut = v_dut + rng.normal(loc=0.0, scale=8.0e-3, size=sample_count)
         return np.vstack([v_shunt, v_dut])
 
 
@@ -163,6 +169,12 @@ def main() -> None:
     print(f"Persisted raw captures: {len(persisted.capture_artifacts)}")
     print(f"Persisted summary rows: {len(persisted.point_summaries)}")
     print(f"Loaded impedance rows from disk: {len(loaded_rows)}")
+    if loaded_rows:
+        print(
+            "First row SNR (dB): "
+            f"current={loaded_rows[0].get('snr_current_db')}, "
+            f"voltage={loaded_rows[0].get('snr_voltage_db')}"
+        )
     print(f"Metadata bank txt: {txt_path}")
     print(f"Metadata measurements csv: {csv_path}")
     print(f"Metadata report html: {html_path}")

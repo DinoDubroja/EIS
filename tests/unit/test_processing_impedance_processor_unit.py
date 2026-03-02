@@ -79,6 +79,10 @@ class TestProcessingImpedanceProcessorUnit(unittest.TestCase):
         )
         self.assertAlmostEqual(result.z_real_ohm, z_target.real, places=3)
         self.assertAlmostEqual(result.z_imag_ohm, z_target.imag, places=3)
+        self.assertIsNotNone(result.snr_current_db)
+        self.assertIsNotNone(result.snr_voltage_db)
+        self.assertTrue(float(result.snr_current_db) > 40.0)
+        self.assertTrue(float(result.snr_voltage_db) > 40.0)
 
     # Checks sine-fit numpy backend also recovers impedance on ideal data.
     def test_compute_impedance_sine_fit_numpy_matches_target(self) -> None:
@@ -110,6 +114,23 @@ class TestProcessingImpedanceProcessorUnit(unittest.TestCase):
         )
         self.assertAlmostEqual(result.z_real_ohm, z_target.real, places=2)
         self.assertAlmostEqual(result.z_imag_ohm, z_target.imag, places=2)
+
+    # Checks SNR values decrease when synthetic noise level is increased.
+    def test_compute_impedance_snr_reflects_noise_level(self) -> None:
+        capture_low_noise = self._build_capture(z_target=complex(5.0, 1.0), noise_scale=0.0002)
+        capture_high_noise = self._build_capture(z_target=complex(5.0, 1.0), noise_scale=0.005)
+
+        result_low = compute_impedance_for_capture(
+            capture=capture_low_noise,
+            config=ImpedanceProcessingConfig(method="fft"),
+        )
+        result_high = compute_impedance_for_capture(
+            capture=capture_high_noise,
+            config=ImpedanceProcessingConfig(method="fft"),
+        )
+
+        self.assertTrue(float(result_low.snr_current_db) > float(result_high.snr_current_db))
+        self.assertTrue(float(result_low.snr_voltage_db) > float(result_high.snr_voltage_db))
 
     # Checks run-level helper returns one result row per capture.
     def test_compute_impedance_for_run_returns_all_rows(self) -> None:

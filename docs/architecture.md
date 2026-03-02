@@ -41,6 +41,7 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
     - one raw file per frequency+repeat
     - one consolidated `IMPEDANCE/impedance.csv` with all frequencies + repeats
     - one consolidated `IMPEDANCE/summary_mean_std.csv` with per-frequency repeat statistics
+    - includes per-row and per-frequency SNR fields for current and voltage channels
     - folder loaders to read saved impedance rows from one run or all runs under a base path
   - `metadata_writer.py`: metadata bank + report generation
     - preferred default view: `REPORTS/metadata_report.html`
@@ -52,6 +53,7 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
     - extraction method selection (`fft` or `sine_fit`)
     - sine-fit backend selection (`numpy_lstsq` or `scipy_least_squares`)
     - nominal shunt conversion (`R_shunt = 0.008 ohm`) and complex impedance output
+    - SNR estimation per channel and per frequency
 - `eis/plotting/` now includes:
   - `run_selection.py`: run discovery + filters from folder names
     - modes: `last`, `last_n`, `all`

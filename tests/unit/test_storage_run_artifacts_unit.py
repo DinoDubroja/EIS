@@ -67,10 +67,18 @@ class TestStorageRunArtifactsUnit(unittest.TestCase):
 
     def _build_impedance_results(self) -> tuple[ImpedancePointResult, ...]:
         return (
-            ImpedancePointResult(2, 1, 10.0, 100.0, -5.0, 100.12492197, -2.862405226, "fft"),
-            ImpedancePointResult(2, 2, 10.0, 102.0, -4.0, 102.07840124, -2.245742565, "fft"),
-            ImpedancePointResult(3, 1, 20.0, 80.0, -10.0, 80.62257748, -7.125016349, "fft"),
-            ImpedancePointResult(3, 2, 20.0, 81.0, -9.0, 81.49846624, -6.340191746, "fft"),
+            ImpedancePointResult(
+                2, 1, 10.0, 100.0, -5.0, 100.12492197, -2.862405226, "fft", 45.0, 43.0
+            ),
+            ImpedancePointResult(
+                2, 2, 10.0, 102.0, -4.0, 102.07840124, -2.245742565, "fft", 44.0, 42.0
+            ),
+            ImpedancePointResult(
+                3, 1, 20.0, 80.0, -10.0, 80.62257748, -7.125016349, "fft", 40.0, 39.0
+            ),
+            ImpedancePointResult(
+                3, 2, 20.0, 81.0, -9.0, 81.49846624, -6.340191746, "fft", 41.0, 38.0
+            ),
         )
 
     # Checks RAW + IMPEDANCE files and summary_mean_std generation for repeats.
@@ -113,12 +121,16 @@ class TestStorageRunArtifactsUnit(unittest.TestCase):
             self.assertEqual(int(row_2["repeat_count"]), 2)
             self.assertAlmostEqual(float(row_2["z_real_mean_ohm"]), 101.0, places=9)
             self.assertAlmostEqual(float(row_2["z_real_std_ohm"]), np.sqrt(2.0), places=9)
+            self.assertAlmostEqual(float(row_2["snr_current_mean_db"]), 44.5, places=9)
+            self.assertAlmostEqual(float(row_2["snr_voltage_mean_db"]), 42.5, places=9)
 
             impedance_table = layout.impedance / "impedance.csv"
             with impedance_table.open("r", newline="", encoding="utf-8") as handle:
                 impedance_rows = list(csv.DictReader(handle))
             self.assertEqual(len(impedance_rows), 4)
             self.assertIn("frequency_hz", impedance_rows[0])
+            self.assertIn("snr_current_db", impedance_rows[0])
+            self.assertIn("snr_voltage_db", impedance_rows[0])
 
             run_rows = load_impedance_rows_from_run(layout.root)
             self.assertEqual(len(run_rows), 4)

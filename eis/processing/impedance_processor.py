@@ -262,6 +262,46 @@ def _extract_phasor(
     )
 
 
+def _estimate_snr_db(
+    *,
+    signal: np.ndarray,
+    sample_rate_sps: float,
+    frequency_hz: float,
+) -> float:
+    """Estimate per-channel SNR in dB using fundamental sine-fit residuals.
+
+    Signal model:
+        ``x(t) = A*sin(wt) + B*cos(wt) + C + residual``
+    SNR definition:
+        ``20*log10(rms(fundamental)/rms(residual))``
+    """
+
+    if signal.size < 4:
+        raise ValueError("Need at least 4 samples to estimate SNR.")
+    t = np.arange(signal.size, dtype=np.float64) / sample_rate_sps
+    omega = 2.0 * np.pi * frequency_hz
+    design = np.column_stack(
+        (
+            np.sin(omega * t),
+            np.cos(omega * t),
+            np.ones_like(t),
+        )
+    )
+    coeffs, _, _, _ = np.linalg.lstsq(design, signal, rcond=None)
+    fit = design @ coeffs
+    fundamental = (design[:, 0] * coeffs[0]) + (design[:, 1] * coeffs[1])
+    residual = signal - fit
+
+    signal_rms = float(np.sqrt(np.mean(np.square(fundamental))))
+    noise_rms = float(np.sqrt(np.mean(np.square(residual))))
+
+    if signal_rms <= 1e-18:
+        return float("-inf")
+    if noise_rms <= 1e-18:
+        return float("inf")
+    return float(20.0 * np.log10(signal_rms / noise_rms))
+
+
 def _processing_method_label(config: ImpedanceProcessingConfig) -> str:
     """Build compact extraction method label for result rows."""
 
@@ -310,6 +350,17 @@ def compute_impedance_for_capture(
         dtype=np.float64,
     )
 
+    snr_current_db = _estimate_snr_db(
+        signal=current_signal,
+        sample_rate_sps=float(capture.sample_rate_sps),
+        frequency_hz=float(capture.frequency_hz),
+    )
+    snr_voltage_db = _estimate_snr_db(
+        signal=voltage_signal,
+        sample_rate_sps=float(capture.sample_rate_sps),
+        frequency_hz=float(capture.frequency_hz),
+    )
+
     if effective.remove_dc_before_extraction:
         current_signal = current_signal - float(np.mean(current_signal))
         voltage_signal = voltage_signal - float(np.mean(voltage_signal))
@@ -355,6 +406,8 @@ def compute_impedance_for_capture(
         z_magnitude_ohm=float(abs(z_phasor)),
         z_phase_deg=float(np.degrees(np.angle(z_phasor))),
         extraction_method=_processing_method_label(effective),
+        snr_current_db=snr_current_db,
+        snr_voltage_db=snr_voltage_db,
         notes=f"Nominal shunt resistance used: {effective.shunt_resistance_ohm:.9g} ohm",
     )
 

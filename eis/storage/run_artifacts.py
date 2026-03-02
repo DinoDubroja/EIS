@@ -153,6 +153,8 @@ def write_impedance_table_csv(
         "z_magnitude_ohm",
         "z_phase_deg",
         "extraction_method",
+        "snr_current_db",
+        "snr_voltage_db",
         "notes",
     ]
 
@@ -170,6 +172,16 @@ def write_impedance_table_csv(
                     "z_magnitude_ohm": f"{result.z_magnitude_ohm:.12g}",
                     "z_phase_deg": f"{result.z_phase_deg:.12g}",
                     "extraction_method": result.extraction_method,
+                    "snr_current_db": (
+                        f"{result.snr_current_db:.12g}"
+                        if result.snr_current_db is not None
+                        else ""
+                    ),
+                    "snr_voltage_db": (
+                        f"{result.snr_voltage_db:.12g}"
+                        if result.snr_voltage_db is not None
+                        else ""
+                    ),
                     "notes": result.notes or "",
                 }
             )
@@ -183,6 +195,15 @@ def _sample_std(values: np.ndarray) -> float:
     if values.size <= 1:
         return 0.0
     return float(np.std(values, ddof=1))
+
+
+def _optional_mean_std(values: list[float]) -> tuple[str, str]:
+    """Return formatted mean/std strings for optional numeric columns."""
+
+    if not values:
+        return "", ""
+    arr = np.asarray(values, dtype=np.float64)
+    return f"{float(np.mean(arr)):.12g}", f"{_sample_std(arr):.12g}"
 
 
 def write_impedance_summary_mean_std_csv(
@@ -215,6 +236,10 @@ def write_impedance_summary_mean_std_csv(
         "z_magnitude_std_ohm",
         "z_phase_mean_deg",
         "z_phase_std_deg",
+        "snr_current_mean_db",
+        "snr_current_std_db",
+        "snr_voltage_mean_db",
+        "snr_voltage_std_db",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -233,6 +258,18 @@ def write_impedance_summary_mean_std_csv(
             z_imag = np.asarray([item.z_imag_ohm for item in point_results], dtype=np.float64)
             z_mag = np.asarray([item.z_magnitude_ohm for item in point_results], dtype=np.float64)
             z_phase = np.asarray([item.z_phase_deg for item in point_results], dtype=np.float64)
+            snr_current_values = [
+                float(item.snr_current_db)
+                for item in point_results
+                if item.snr_current_db is not None
+            ]
+            snr_voltage_values = [
+                float(item.snr_voltage_db)
+                for item in point_results
+                if item.snr_voltage_db is not None
+            ]
+            snr_current_mean, snr_current_std = _optional_mean_std(snr_current_values)
+            snr_voltage_mean, snr_voltage_std = _optional_mean_std(snr_voltage_values)
             methods = sorted({item.extraction_method for item in point_results})
 
             writer.writerow(
@@ -249,6 +286,10 @@ def write_impedance_summary_mean_std_csv(
                     "z_magnitude_std_ohm": f"{_sample_std(z_mag):.12g}",
                     "z_phase_mean_deg": f"{float(np.mean(z_phase)):.12g}",
                     "z_phase_std_deg": f"{_sample_std(z_phase):.12g}",
+                    "snr_current_mean_db": snr_current_mean,
+                    "snr_current_std_db": snr_current_std,
+                    "snr_voltage_mean_db": snr_voltage_mean,
+                    "snr_voltage_std_db": snr_voltage_std,
                 }
             )
 
@@ -397,6 +438,8 @@ def _parse_impedance_csv_row(row: dict[str, str]) -> dict[str, Any]:
         "z_magnitude_ohm": float(row["z_magnitude_ohm"]),
         "z_phase_deg": float(row["z_phase_deg"]),
         "extraction_method": row["extraction_method"],
+        "snr_current_db": float(row["snr_current_db"]) if row.get("snr_current_db") else None,
+        "snr_voltage_db": float(row["snr_voltage_db"]) if row.get("snr_voltage_db") else None,
         "notes": row["notes"] or None,
     }
 
