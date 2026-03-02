@@ -21,6 +21,7 @@ Repository for EIS measurement scripts and libraries
     - `eis/storage/metadata_writer.py`
   - Architecture notes: `docs/architecture.md`
   - Usage notes: `docs/phase1_usage.md`
+  - Consolidated project rules: `docs/project_rules.md`
 - `USB6451`: NI USB-6451 high-level helper class
   - Docs: `USB6451/README.md`
   - Unit tests: `USB6451/tests/test_usb6451_unit.py`, `USB6451/tests/test_waveforms_unit.py`
