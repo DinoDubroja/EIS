@@ -56,11 +56,13 @@ class TestPlottingRawFitPlotsUnit(unittest.TestCase):
                 frequency_hz=50.0,
             )
             save_path = base / "PLOTS" / "raw_fit.png"
+            save_vector_path = base / "PLOTS" / "raw_fit.svg"
 
             fig, axes, result = plot_raw_vs_fitted_from_csv(
                 raw_csv_path=raw_path,
                 frequency_hz=50.0,
                 save_path=save_path,
+                save_vector_path=save_vector_path,
             )
 
             self.assertIsNotNone(fig)
@@ -68,7 +70,11 @@ class TestPlottingRawFitPlotsUnit(unittest.TestCase):
             self.assertEqual(len(result.channel_summaries), 2)
             self.assertTrue(save_path.exists())
             self.assertTrue(save_path.stat().st_size > 0)
+            self.assertTrue(save_vector_path.exists())
+            self.assertTrue(save_vector_path.stat().st_size > 0)
             self.assertGreater(result.channel_summaries[0].snr_db, 10.0)
+            self.assertEqual(axes[0].lines[0].get_color().lower(), "#8b0000")
+            self.assertEqual(axes[1].lines[0].get_color().lower(), "#00008b")
 
     # Checks frequency can be inferred from RAW folder naming convention.
     def test_infer_frequency_from_raw_path(self) -> None:

@@ -30,6 +30,7 @@ from eis import (
     ImpedancePointResult,
     RunSelection,
     create_run_folder_layout,
+    load_and_validate_config,
     plot_impedance_bode,
     plot_impedance_nyquist,
     plot_raw_vs_fitted_from_csv,
@@ -37,45 +38,81 @@ from eis import (
     write_impedance_summary_mean_std_csv,
     write_impedance_table_csv,
 )
+from eis.storage.naming import build_point_folder_name
 
 
-def _build_rows(scale: float, snr_base_db: float) -> tuple[ImpedancePointResult, ...]:
+def _load_demo_frequencies() -> tuple[float, ...]:
+    """Load demo frequencies from config example, with deterministic fallback.
+
+    Primary source:
+    - ``config_examples/config_phase1_example.xlsx``
+    Fallback:
+    - hard-coded list matching the current example config values.
+    """
+
+    config_path = REPO_ROOT / "config_examples" / "config_phase1_example.xlsx"
+    fallback = (
+        12.54,
+        19.9,
+        31.54,
+        49.0,
+        79.18,
+        125.79,
+        199.6,
+        314.46,
+        497.51,
+        793.65,
+        1234.57,
+        1960.78,
+        3030.3,
+        4761.91,
+    )
+    if not config_path.exists():
+        return fallback
+    try:
+        sweep = load_and_validate_config(config_path)
+    except Exception:
+        return fallback
+
+    values = [float(point.frequency_hz) for point in sweep.points]
+    return tuple(values) if values else fallback
+
+
+def _build_rows(
+    *,
+    scale: float,
+    snr_base_db: float,
+    frequencies_hz: tuple[float, ...],
+) -> tuple[ImpedancePointResult, ...]:
     """Build deterministic impedance rows for one synthetic run.
 
-    ``snr_base_db`` is intentionally varied per run so threshold checks in the
-    SNR plot include both passing and failing examples.
+    The synthetic model uses a smooth RC-like trend over frequency so Nyquist
+    and Bode overlays look realistic while still remaining deterministic.
     """
 
     rows: list[ImpedancePointResult] = []
-    for repeat_index in (1, 2):
-        rows.append(
-            ImpedancePointResult(
-                row_number=2,
-                repeat_index=repeat_index,
-                frequency_hz=10.0,
-                z_real_ohm=scale * (5.0 + 0.05 * repeat_index),
-                z_imag_ohm=scale * (1.0 + 0.03 * repeat_index),
-                z_magnitude_ohm=scale * 5.2,
-                z_phase_deg=11.5,
-                extraction_method="fft",
-                snr_current_db=snr_base_db + 0.8 * repeat_index,
-                snr_voltage_db=snr_base_db + 1.5 * repeat_index,
+    for row_number, frequency_hz in enumerate(frequencies_hz, start=2):
+        normalized = np.log10(max(frequency_hz, 1e-6))
+        z_real_nominal = 5.3 - 0.34 * normalized
+        z_imag_nominal = 1.35 / (1.0 + 0.55 * normalized)
+        for repeat_index in (1, 2):
+            z_real = scale * (z_real_nominal + 0.015 * repeat_index)
+            z_imag = scale * (z_imag_nominal + 0.010 * repeat_index)
+            z_value = complex(z_real, z_imag)
+            rows.append(
+                ImpedancePointResult(
+                    row_number=row_number,
+                    repeat_index=repeat_index,
+                    frequency_hz=frequency_hz,
+                    z_real_ohm=float(np.real(z_value)),
+                    z_imag_ohm=float(np.imag(z_value)),
+                    z_magnitude_ohm=float(abs(z_value)),
+                    z_phase_deg=float(np.degrees(np.angle(z_value))),
+                    extraction_method="fft",
+                    snr_current_db=snr_base_db + 2.0 * normalized + 0.30 * repeat_index,
+                    snr_voltage_db=snr_base_db + 2.8 * normalized + 0.45 * repeat_index,
+                )
             )
-        )
-        rows.append(
-            ImpedancePointResult(
-                row_number=3,
-                repeat_index=repeat_index,
-                frequency_hz=20.0,
-                z_real_ohm=scale * (4.7 + 0.04 * repeat_index),
-                z_imag_ohm=scale * (0.8 + 0.02 * repeat_index),
-                z_magnitude_ohm=scale * 4.8,
-                z_phase_deg=9.7,
-                extraction_method="fft",
-                snr_current_db=snr_base_db + 0.4 * repeat_index,
-                snr_voltage_db=snr_base_db + 1.2 * repeat_index,
-            )
-        )
     return tuple(rows)
 
 
@@ -121,6 +158,7 @@ def main() -> None:
     base = REPO_ROOT / "measurements"
     started = datetime.now().replace(second=0, microsecond=0)
     serial_prefix = f"PLOTDEMO_{datetime.now().strftime('%H%M%S')}"
+    frequencies_hz = _load_demo_frequencies()
 
     created_roots: list[Path] = []
     for index, serial_suffix in enumerate(("A", "A", "B", "B"), start=1):
@@ -131,7 +169,11 @@ def main() -> None:
             serial_number=serial_number,
             started_at_local=dt,
         )
-        rows = _build_rows(scale=1.0 + 0.05 * index, snr_base_db=8.0 + 4.2 * index)
+        rows = _build_rows(
+            scale=1.0 + 0.05 * index,
+            snr_base_db=8.0 + 4.2 * index,
+            frequencies_hz=frequencies_hz,
+        )
         write_impedance_table_csv(results=rows, output_path=layout.impedance / "impedance.csv")
         write_impedance_summary_mean_std_csv(
             results=rows,
@@ -177,23 +219,27 @@ def main() -> None:
         save_path=snr_png,
     )
 
+    raw_demo_frequency_hz = float(frequencies_hz[0])
     raw_csv = _write_noisy_raw_capture_csv(
         output_path=created_roots[-1]
         / "RAW"
-        / "row_0002_f10Hz"
+        / build_point_folder_name(2, raw_demo_frequency_hz)
         / "repeat_001_raw_ch1_ai0_ch2_ai7.csv",
-        frequency_hz=10.0,
+        frequency_hz=raw_demo_frequency_hz,
     )
     raw_fit_png = created_roots[-1] / "PLOTS" / "demo_raw_vs_fitted_noise.png"
+    raw_fit_svg = created_roots[-1] / "PLOTS" / "demo_raw_vs_fitted_noise.svg"
     _, _, raw_fit_result = plot_raw_vs_fitted_from_csv(
         raw_csv_path=raw_csv,
-        frequency_hz=10.0,
+        frequency_hz=raw_demo_frequency_hz,
         save_path=raw_fit_png,
+        save_vector_path=raw_fit_svg,
         title="Noisy raw vs fitted (demo)",
     )
 
     print("Plot selection demo completed")
     print(f"Created synthetic runs: {len(created_roots)}")
+    print(f"Frequency points per run: {len(frequencies_hz)}")
     print("Selection last run folders:")
     for item in runs_last:
         print(f"  - {item.root.name}")
@@ -226,6 +272,7 @@ def main() -> None:
     print(f"Saved bode filtered: {bode_png}")
     print(f"Saved SNR plot: {snr_png}")
     print(f"Saved raw-vs-fitted plot: {raw_fit_png}")
+    print(f"Saved raw-vs-fitted vector plot: {raw_fit_svg}")
 
 
 if __name__ == "__main__":

@@ -322,6 +322,7 @@ fig, axes, result = plot_raw_vs_fitted_from_csv(
     ),
     frequency_hz=10.0,  # optional if path contains row_*_f*Hz folder name
     save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/raw_vs_fit.png",
+    save_vector_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/raw_vs_fit.svg",
 )
 
 for channel in result.channel_summaries:
@@ -331,3 +332,8 @@ for channel in result.channel_summaries:
 `demo_tests/phase1_plotting_selection_demo.py` now also generates:
 - SNR-frequency plot in `PLOTS/demo_snr_filtered.png`
 - noisy raw-vs-fitted plot in `PLOTS/demo_raw_vs_fitted_noise.png`
+- noisy raw-vs-fitted vector plot in `PLOTS/demo_raw_vs_fitted_noise.svg`
+
+Raw-vs-fitted style rule:
+- current channel traces are dark red
+- voltage channel traces are dark blue

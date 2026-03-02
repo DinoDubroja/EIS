@@ -12,6 +12,9 @@ What this module provides:
 - A linear sine-fit routine at commanded frequency.
 - Overlay plots of raw channel waveforms and fitted fundamentals.
 - Per-channel fit summaries (amplitude, phase, offset, residual RMS, SNR).
+- Channel-role styling rule:
+  - current channel traces use dark red
+  - voltage channel traces use dark blue
 """
 
 from __future__ import annotations
@@ -27,6 +30,9 @@ import numpy as np
 
 
 _POINT_FOLDER_FREQ_PATTERN = re.compile(r"_f(?P<freq_token>[0-9_]+)Hz$", re.IGNORECASE)
+_CURRENT_COLOR = "#8B0000"  # dark red
+_VOLTAGE_COLOR = "#00008B"  # dark blue
+_FALLBACK_COLOR = "#4d4d4d"
 
 
 @dataclass(frozen=True)
@@ -154,6 +160,28 @@ def _fit_sine_linear(
     return fitted.astype(np.float64, copy=False), summary
 
 
+def _infer_channel_role(channel_name: str) -> str:
+    """Infer channel role for style mapping from common naming conventions."""
+
+    token = channel_name.strip().lower()
+    if any(key in token for key in ("current", "ai0", "ch1")):
+        return "current"
+    if any(key in token for key in ("voltage", "ai7", "ch2")):
+        return "voltage"
+    return "other"
+
+
+def _channel_color(channel_name: str) -> str:
+    """Resolve line color from inferred channel role."""
+
+    role = _infer_channel_role(channel_name)
+    if role == "current":
+        return _CURRENT_COLOR
+    if role == "voltage":
+        return _VOLTAGE_COLOR
+    return _FALLBACK_COLOR
+
+
 def plot_raw_vs_fitted_from_csv(
     *,
     raw_csv_path: str | Path,
@@ -163,6 +191,7 @@ def plot_raw_vs_fitted_from_csv(
     axes: tuple[plt.Axes, ...] | None = None,
     title: str | None = None,
     save_path: str | Path | None = None,
+    save_vector_path: str | Path | None = None,
 ) -> tuple[plt.Figure, tuple[plt.Axes, ...], RawFitPlotResult]:
     """Plot raw channel waveforms overlaid with fitted fundamentals.
 
@@ -178,6 +207,8 @@ def plot_raw_vs_fitted_from_csv(
         axes: Optional axis tuple with one axis per plotted channel.
         title: Optional figure title.
         save_path: Optional image output path.
+        save_vector_path: Optional vector image output path (for example
+            ``.svg`` or ``.pdf``) for documentation and publication workflows.
     Output:
         ``(fig, axes, result)`` where ``result`` includes per-channel fit
         summaries useful for notebook tables or threshold checks.
@@ -224,6 +255,7 @@ def plot_raw_vs_fitted_from_csv(
 
     for axis, channel_name in zip(axes_tuple, selected_names):
         signal = all_channels[channel_name]
+        channel_color = _channel_color(channel_name)
         fitted, summary_base = _fit_sine_linear(
             time_s=time_s,
             signal=signal,
@@ -242,17 +274,18 @@ def plot_raw_vs_fitted_from_csv(
         axis.plot(
             time_s[::plot_stride],
             signal[::plot_stride],
-            color="#4d4d4d",
+            color=channel_color,
             linewidth=0.9,
-            alpha=0.85,
+            alpha=0.45,
             label="raw",
         )
         axis.plot(
             time_s[::plot_stride],
             fitted[::plot_stride],
-            color="#1f77b4",
+            color=channel_color,
+            linestyle="--",
             linewidth=1.3,
-            alpha=0.95,
+            alpha=0.98,
             label="fitted fundamental",
         )
         axis.set_ylabel(f"{channel_name} (V)")
@@ -281,6 +314,10 @@ def plot_raw_vs_fitted_from_csv(
         output = Path(save_path)
         output.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output, dpi=140)
+    if save_vector_path is not None:
+        vector_output = Path(save_vector_path)
+        vector_output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(vector_output)
 
     return (
         fig,
