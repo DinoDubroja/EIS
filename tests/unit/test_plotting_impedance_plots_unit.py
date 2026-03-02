@@ -59,6 +59,20 @@ class TestPlottingImpedancePlotsUnit(unittest.TestCase):
             self.assertEqual(len(selected), 2)
             self.assertEqual(len(ax.lines), 2)
 
+    # Checks optional save_path writes output image file.
+    def test_plot_impedance_nyquist_save_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            run_root = self._create_run_with_impedance(base, "SN_A", datetime(2026, 3, 1, 9, 0))
+            out_path = run_root / "PLOTS" / "unit_nyquist.png"
+            _, _, _ = plot_impedance_nyquist(
+                base_output_dir=base,
+                selection=RunSelection(mode="last"),
+                save_path=out_path,
+            )
+            self.assertTrue(out_path.exists())
+            self.assertTrue(out_path.stat().st_size > 0)
+
     # Checks Bode plot supports serial and time filters inferred from folder names.
     def test_plot_impedance_bode_serial_and_time_filter(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

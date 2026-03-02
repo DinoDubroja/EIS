@@ -85,32 +85,32 @@ def main() -> None:
         created_roots.append(layout.root)
 
     selection_last = RunSelection(mode="last", serial_contains=serial_prefix)
-    fig_last, _, runs_last = plot_impedance_nyquist(
+    last_png = created_roots[-1] / "PLOTS" / "demo_nyquist_last.png"
+    _, _, runs_last = plot_impedance_nyquist(
         base_output_dir=base,
         selection=selection_last,
+        save_path=last_png,
     )
-    last_png = created_roots[-1] / "REPORTS" / "demo_nyquist_last.png"
-    fig_last.savefig(last_png, dpi=140)
 
     selection_last_n = RunSelection(mode="last_n", last_n=3, serial_contains=serial_prefix)
-    fig_last_n, _, runs_last_n = plot_impedance_nyquist(
+    last_n_png = created_roots[-1] / "PLOTS" / "demo_nyquist_last_n.png"
+    _, _, runs_last_n = plot_impedance_nyquist(
         base_output_dir=base,
         selection=selection_last_n,
+        save_path=last_n_png,
     )
-    last_n_png = created_roots[-1] / "REPORTS" / "demo_nyquist_last_n.png"
-    fig_last_n.savefig(last_n_png, dpi=140)
 
     selection_all_filtered = RunSelection(
         mode="all",
         serial_contains=f"{serial_prefix}_B",
         started_at_or_after=started + timedelta(minutes=3),
     )
-    fig_bode, _, runs_all_filtered = plot_impedance_bode(
+    bode_png = created_roots[-1] / "PLOTS" / "demo_bode_filtered.png"
+    _, _, runs_all_filtered = plot_impedance_bode(
         base_output_dir=base,
         selection=selection_all_filtered,
+        save_path=bode_png,
     )
-    bode_png = created_roots[-1] / "REPORTS" / "demo_bode_filtered.png"
-    fig_bode.savefig(bode_png, dpi=140)
 
     print("Plot selection demo completed")
     print(f"Created synthetic runs: {len(created_roots)}")

@@ -71,6 +71,7 @@ def plot_impedance_nyquist(
     aggregate_repeats: bool = True,
     ax=None,
     title: str | None = None,
+    save_path: str | Path | None = None,
 ) -> tuple[plt.Figure, plt.Axes, tuple[RunFolderRecord, ...]]:
     """Plot Nyquist overlay for selected run folders.
 
@@ -81,6 +82,7 @@ def plot_impedance_nyquist(
             (mean over repeats). If false, each repeat row is plotted.
         ax: Optional matplotlib axis. If omitted, new figure is created.
         title: Optional custom title.
+        save_path: Optional output image path. If provided, figure is saved.
     Output:
         Tuple ``(fig, ax, selected_runs)``.
     Raises:
@@ -120,6 +122,12 @@ def plot_impedance_nyquist(
     ax.grid(True, alpha=0.3)
     ax.legend(loc="best", fontsize=8)
     fig.tight_layout()
+
+    if save_path is not None:
+        output = Path(save_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=140)
+
     return fig, ax, selected_runs
 
 
@@ -130,6 +138,7 @@ def plot_impedance_bode(
     aggregate_repeats: bool = True,
     axes: tuple[plt.Axes, plt.Axes] | None = None,
     title: str | None = None,
+    save_path: str | Path | None = None,
 ) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes], tuple[RunFolderRecord, ...]]:
     """Plot Bode magnitude/phase overlay for selected run folders.
 
@@ -140,6 +149,7 @@ def plot_impedance_bode(
             (mean over repeats). If false, each repeat row is plotted.
         axes: Optional tuple ``(ax_magnitude, ax_phase)``.
         title: Optional figure-level title.
+        save_path: Optional output image path. If provided, figure is saved.
     Output:
         Tuple ``(fig, (ax_mag, ax_phase), selected_runs)``.
     Raises:
@@ -190,4 +200,10 @@ def plot_impedance_bode(
         fig.tight_layout(rect=[0, 0, 1, 0.97])
     else:
         fig.tight_layout()
+
+    if save_path is not None:
+        output = Path(save_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=140)
+
     return fig, (ax_mag, ax_phase), selected_runs

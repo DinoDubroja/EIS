@@ -253,12 +253,14 @@ from eis import RunSelection, plot_impedance_bode, plot_impedance_nyquist
 plot_impedance_nyquist(
     base_output_dir="measurements",
     selection=RunSelection(mode="last"),
+    save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/nyquist_last.png",
 )
 
 # Newest 5 runs for one serial prefix
 plot_impedance_nyquist(
     base_output_dir="measurements",
     selection=RunSelection(mode="last_n", last_n=5, serial_contains="Z100N34"),
+    save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/nyquist_last5.png",
 )
 
 # All runs in a time window for selected serials
@@ -270,6 +272,7 @@ plot_impedance_bode(
         started_at_or_after=datetime(2026, 3, 1, 8, 0),
         started_at_or_before=datetime(2026, 3, 1, 16, 0),
     ),
+    save_path="measurements/Z100N34_1_3_2026_14_45/PLOTS/bode_filtered.png",
 )
 ```
 
