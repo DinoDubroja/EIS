@@ -55,8 +55,7 @@ def load_and_validate_config(xlsx_path: str | Path, sheet_name: str | None = Non
 
     Inputs:
         xlsx_path: Path to measurement configuration workbook.
-        sheet_name: Optional sheet name override. If omitted, first sheet is
-            used by loader defaults.
+        sheet_name: Optional sheet name override. If omitted, first sheet is used by loader defaults.
     Output:
         ``SweepConfig`` ready for acquisition execution.
     Raises:
