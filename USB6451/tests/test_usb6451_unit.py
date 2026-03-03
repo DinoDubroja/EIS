@@ -131,9 +131,11 @@ def _install_fake_nidaqmx() -> None:
 
     class TerminalConfiguration:
         DIFFERENTIAL = "DIFFERENTIAL"
+        DIFF = DIFFERENTIAL
         RSE = "RSE"
         NRSE = "NRSE"
         PSEUDODIFFERENTIAL = "PSEUDODIFFERENTIAL"
+        PSEUDO_DIFF = PSEUDODIFFERENTIAL
 
     fake_nidaqmx.DaqError = DaqError
     fake_nidaqmx.Task = Task

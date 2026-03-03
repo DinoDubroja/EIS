@@ -14,6 +14,27 @@ except ImportError:
     import waveforms
 
 
+def _terminal_enum_value(*names: str):
+    """Return first available terminal enum value across NI-DAQmx versions.
+
+    NI Python package versions expose different enum names for the same terminal
+    mode (for example ``DIFFERENTIAL`` vs ``DIFF``). This helper keeps runtime
+    behavior stable across those versions.
+    """
+
+    for name in names:
+        value = getattr(TerminalConfiguration, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+_TERMINAL_DIFF = _terminal_enum_value("DIFFERENTIAL", "DIFF")
+_TERMINAL_RSE = _terminal_enum_value("RSE")
+_TERMINAL_NRSE = _terminal_enum_value("NRSE")
+_TERMINAL_PSEUDO_DIFF = _terminal_enum_value("PSEUDODIFFERENTIAL", "PSEUDO_DIFF")
+
+
 @dataclass(frozen=True)
 class ContinuousSineConfig:
     """Validated settings used to start continuous sine output.
@@ -1873,7 +1894,8 @@ class USB6451:
             )
         if (
             terminal_config is not None
-            and terminal_config == TerminalConfiguration.DIFFERENTIAL
+            and _TERMINAL_DIFF is not None
+            and terminal_config == _TERMINAL_DIFF
             and len(ai_channels) > self.MAX_AI_DIFF_CHANNELS
         ):
             raise ValueError(
@@ -1957,17 +1979,26 @@ class USB6451:
         if mode in ("", "default"):
             return None
 
-        mapping = {
-            "differential": TerminalConfiguration.DIFFERENTIAL,
-            "diff": TerminalConfiguration.DIFFERENTIAL,
-            "rse": TerminalConfiguration.RSE,
-            "nrse": TerminalConfiguration.NRSE,
-            "pseudodifferential": TerminalConfiguration.PSEUDODIFFERENTIAL,
-            "pseudo": TerminalConfiguration.PSEUDODIFFERENTIAL,
-        }
+        mapping = {}
+        if _TERMINAL_DIFF is not None:
+            mapping["differential"] = _TERMINAL_DIFF
+            mapping["diff"] = _TERMINAL_DIFF
+        if _TERMINAL_RSE is not None:
+            mapping["rse"] = _TERMINAL_RSE
+        if _TERMINAL_NRSE is not None:
+            mapping["nrse"] = _TERMINAL_NRSE
+        if _TERMINAL_PSEUDO_DIFF is not None:
+            mapping["pseudodifferential"] = _TERMINAL_PSEUDO_DIFF
+            mapping["pseudo"] = _TERMINAL_PSEUDO_DIFF
+
         if mode not in mapping:
+            supported = ", ".join(
+                key
+                for key in ("default", "differential", "rse", "nrse", "pseudodifferential")
+                if key == "default" or key in mapping
+            )
             raise ValueError(
                 "input_mode must be one of: "
-                "default, differential, rse, nrse, pseudodifferential."
+                f"{supported}."
             )
         return mapping[mode]
