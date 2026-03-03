@@ -31,7 +31,7 @@ import numpy as np
 
 _POINT_FOLDER_FREQ_PATTERN = re.compile(r"_f(?P<freq_token>[0-9_]+)Hz$", re.IGNORECASE)
 _CURRENT_COLOR = "#8B0000"  # dark red
-_VOLTAGE_COLOR = "#1E589F"  # some blue
+_VOLTAGE_COLOR = "#00008B"  # dark blue
 _FALLBACK_COLOR = "#4d4d4d"
 
 

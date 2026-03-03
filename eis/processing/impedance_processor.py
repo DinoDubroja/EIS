@@ -147,6 +147,36 @@ def _apply_frequency_domain_filter(
     return np.fft.irfft(filtered_spectrum, n=signal.size).astype(np.float64, copy=False)
 
 
+def prepare_signal_for_processing(
+    *,
+    signal: np.ndarray,
+    sample_rate_sps: float,
+    frequency_hz: float,
+    config: ImpedanceProcessingConfig,
+) -> np.ndarray:
+    """Apply the same preconditioning used by impedance extraction path.
+
+    Inputs:
+        signal: One channel time-domain trace in volts.
+        sample_rate_sps: Sampling rate in samples/second (S/s).
+        frequency_hz: Commanded fundamental frequency in hertz (Hz).
+        config: Processing configuration controlling DC removal and filter mode.
+    Output:
+        Conditioned signal after optional DC removal and optional frequency-domain
+        filtering, ready for FFT or sine-fit extraction.
+    """
+
+    conditioned = np.asarray(signal, dtype=np.float64)
+    if config.remove_dc_before_extraction:
+        conditioned = conditioned - float(np.mean(conditioned))
+    return _apply_frequency_domain_filter(
+        signal=conditioned,
+        sample_rate_sps=sample_rate_sps,
+        frequency_hz=frequency_hz,
+        config=config,
+    )
+
+
 def _extract_phasor_fft(
     *,
     signal: np.ndarray,
@@ -370,17 +400,13 @@ def compute_impedance_for_capture(
         frequency_hz=float(capture.frequency_hz),
     )
 
-    if effective.remove_dc_before_extraction:
-        current_signal = current_signal - float(np.mean(current_signal))
-        voltage_signal = voltage_signal - float(np.mean(voltage_signal))
-
-    current_signal = _apply_frequency_domain_filter(
+    current_signal = prepare_signal_for_processing(
         signal=current_signal,
         sample_rate_sps=float(capture.sample_rate_sps),
         frequency_hz=float(capture.frequency_hz),
         config=effective,
     )
-    voltage_signal = _apply_frequency_domain_filter(
+    voltage_signal = prepare_signal_for_processing(
         signal=voltage_signal,
         sample_rate_sps=float(capture.sample_rate_sps),
         frequency_hz=float(capture.frequency_hz),

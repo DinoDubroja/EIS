@@ -346,3 +346,71 @@ for channel in result.channel_summaries:
 Raw-vs-fitted style rule:
 - current channel traces are dark red
 - voltage channel traces are dark blue
+
+## Notebook Frontend Wrappers (Current)
+Use frontend wrappers to keep notebook code short and readable:
+
+```python
+from eis import RunSaveOptions, run_preflight_only, run_measure_process_save
+
+preflight = run_preflight_only(
+    sweep=sweep,
+    hardware=hardware,
+    excitation=excitation,
+    test_current_rms_a=10.0,
+)
+
+bundle = run_measure_process_save(
+    sweep=sweep,
+    hardware=hardware,
+    excitation=excitation,
+    processing=processing,
+    base_output_dir="measurements",
+    serial_number="Z100N34",
+    user_name="operator",
+    description="fixture A",
+    save_options=RunSaveOptions(),
+)
+```
+
+Returned `bundle` includes:
+- `run_result` for in-memory debug plotting
+- `layout` paths (`RAW`, `IMPEDANCE`, `PLOTS`, `REPORTS`)
+- `saved_paths` for metadata/report outputs
+
+## Capture-Level Debug Plots (Time + FFT)
+For one selected frequency/repeat from in-memory `run_result`, plot:
+- time-domain traces for selected components (`raw`, `filtered`, `fitted`)
+- FFT magnitude for selected components (`raw`, `filtered`, `fitted`)
+
+```python
+from eis import (
+    plot_capture_fft_components,
+    plot_capture_time_domain_components,
+)
+
+plot_capture_time_domain_components(
+    run_result=bundle.run_result,
+    frequency_hz=10.0,
+    repeat_index=1,
+    components=("raw", "filtered", "fitted"),
+    processing_config=processing,
+    save_path=bundle.layout.plots / "debug_time_f10_rep1.png",
+    save_vector_path=bundle.layout.plots / "debug_time_f10_rep1.svg",
+)
+
+plot_capture_fft_components(
+    run_result=bundle.run_result,
+    frequency_hz=10.0,
+    repeat_index=1,
+    components=("raw", "filtered", "fitted"),
+    processing_config=processing,
+    max_frequency_hz=1000.0,
+    save_path=bundle.layout.plots / "debug_fft_f10_rep1.png",
+    save_vector_path=bundle.layout.plots / "debug_fft_f10_rep1.svg",
+)
+```
+
+Notes:
+- frequency/repeat/component selectors are independent for time and FFT views.
+- SNR summary is printed per channel and component.

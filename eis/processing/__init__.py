@@ -10,10 +10,12 @@ from eis.processing.impedance_processor import (
     ImpedanceProcessingConfig,
     compute_impedance_for_capture,
     compute_impedance_for_run,
+    prepare_signal_for_processing,
 )
 
 __all__ = [
     "ImpedanceProcessingConfig",
     "compute_impedance_for_capture",
     "compute_impedance_for_run",
+    "prepare_signal_for_processing",
 ]

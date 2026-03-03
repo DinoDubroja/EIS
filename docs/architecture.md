@@ -15,6 +15,7 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
 - `eis/processing/`: FFT/fitting/filtering/impedance extraction.
 - `eis/storage/`: folder naming, file writing, metadata.
 - `eis/plotting/`: plot templates and plotting API.
+- `eis/frontend/`: notebook-oriented high-level wrappers.
 
 ## Why this split
 - Supports testability without hardware for most logic.
@@ -63,5 +64,14 @@ Phase 1 builds a modular backend for synchronized USB-6451 impedance measurement
     over all frequencies for each run.
   - `raw_fit_plots.py`: raw-vs-fitted overlays from persisted `RAW/*.csv` captures
     with per-channel fit summaries (amplitude, phase, residual RMS, SNR).
+  - `capture_debug_plots.py`: in-memory capture debug plotting for one selected
+    frequency/repeat with independent component selectors:
+    - time-domain view (`raw`, `filtered`, `fitted`)
+    - frequency-domain FFT view (`raw`, `filtered`, `fitted`)
+- `eis/frontend/` now includes:
+  - `measurement_runs.py`:
+    - `run_preflight_only(...)`
+    - `run_measure_process_save(...)`
+    - dataclasses for notebook save options and returned run bundle
 - Next chunk:
   - higher-level uncertainty analysis/report layering.
